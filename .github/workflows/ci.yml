@@ -60,7 +60,7 @@ jobs:
           # 3. Execute Deployment Script
           ssh ssh.homesislab.my.id << 'EOF'
             # Adjusted path to current project: sis-harmoni
-            cd /home/gie/workspace/sis-harmoni
+            cd /home/gie/workspace/warga-be/sis-harmoni
             git fetch origin main
             git reset --hard origin/main
             docker compose up -d --build
