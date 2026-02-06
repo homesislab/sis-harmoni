@@ -1,0 +1,123 @@
+<?php
+defined('BASEPATH') OR exit('No direct script access allowed');
+
+class FundraiserDonations extends MY_Controller
+{
+    public function __construct()
+    {
+        parent::__construct();
+        $this->as_api();
+        $this->require_auth();
+        $this->load->model('Fundraiser_model', 'FundraiserModel');
+        $this->load->model('Donation_model', 'DonationModel');
+        $this->load->model('Ledger_model', 'LedgerModel');
+    }
+
+    public function index_admin(): void
+    {
+        $this->require_role(['admin']);
+
+        $page = max(1, (int)$this->input->get('page'));
+        $per = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+
+        $status = trim((string)$this->input->get('status'));
+        $q = trim((string)$this->input->get('q'));
+
+        $status = $status !== '' ? strtolower($status) : '';
+        if ($status && !in_array($status, ['pending', 'approved', 'rejected'], true)) {
+            api_validation_error(['status' => 'Nilai tidak valid']);
+            return;
+        }
+
+        $filters = [
+            'status' => ($status !== '' ? $status : null),
+            'q' => ($q !== '' ? $q : null),
+        ];
+
+        $res = $this->DonationModel->paginate_admin($page, $per, $filters);
+        api_ok(['items' => $res['items']], $res['meta']);
+    }
+
+    public function approve(int $id = 0): void
+    {
+        $this->require_role(['admin']);
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
+
+        $don = $this->DonationModel->find_by_id($id);
+        if (!$don) {
+            api_not_found('Donation tidak ditemukan');
+            return;
+        }
+        if (($don['status'] ?? '') !== 'pending') {
+            api_conflict('Donation sudah diproses');
+            return;
+        }
+
+        $fund = $this->FundraiserModel->find_by_id((int)$don['fundraiser_id']);
+        if (!$fund) {
+            api_error('SERVER_ERROR', 'Fundraiser missing', 500);
+            return;
+        }
+
+        $this->db->trans_begin();
+
+        try {
+            $ledger_account_id = $this->LedgerModel->ensure_default_account($fund['category']);
+
+            $ledger_entry_id = $this->LedgerModel->create_entry([
+                'ledger_account_id' => $ledger_account_id,
+                'direction' => 'in',
+                'amount' => (float)$don['amount'],
+                'category' => 'fundraiser_donation',
+                'description' => 'Donasi fundraiser #' . $don['fundraiser_id'] . ' - ' . $fund['title'],
+                'occurred_at' => $don['paid_at'],
+                'source_type' => 'fundraiser_donation',
+                'source_id' => (int)$don['id'],
+                'created_by' => (int)$this->auth_user['id'],
+            ]);
+
+            $this->DonationModel->approve($id, (int)$this->auth_user['id']);
+            $this->FundraiserModel->add_collected((int)$don['fundraiser_id'], (float)$don['amount']);
+
+            $this->db->trans_commit();
+
+            audit_log($this, 'donation_approve', "Approve donation #$id ledger_entry #$ledger_entry_id");
+
+            api_ok(null, ['message' => 'Donation disetujui', 'ledger_entry_id' => $ledger_entry_id]);
+        } catch (Throwable $e) {
+            $this->db->trans_rollback();
+            log_message('error', 'approve_donation error: ' . $e->getMessage());
+            api_error('SERVER_ERROR', 'Terjadi kesalahan pada server', 500);
+        }
+    }
+
+    public function reject(int $id = 0): void
+    {
+        $this->require_role(['admin']);
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
+
+        $don = $this->DonationModel->find_by_id($id);
+        if (!$don) {
+            api_not_found('Donation tidak ditemukan');
+            return;
+        }
+        if (($don['status'] ?? '') !== 'pending') {
+            api_conflict('Donation sudah diproses');
+            return;
+        }
+
+        $in = $this->json_input();
+        $note = isset($in['note']) ? trim((string)$in['note']) : null;
+
+        $this->DonationModel->reject($id, (int)$this->auth_user['id'], $note);
+        audit_log($this, 'donation_reject', "Reject donation #$id");
+
+        api_ok(null, ['message' => 'Donation ditolak']);
+    }
+}
