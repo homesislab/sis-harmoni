@@ -1,0 +1,2957 @@
+openapi: 3.0.3
+info:
+  title: SIS Harmoni API
+  description: Backend API for Residents management application.
+  version: 1.0.0
+servers:
+  - url: http://sis-harmoni.test/api/v1
+    description: Local development server
+tags:
+  - name: Authentication
+  - name: Population
+  - name: Finance
+  - name: Resident Services
+  - name: "Community & Content"
+  - name: Resident Specific (My)
+  - name: Admin Operations
+  - name: "Assets & Businesses"
+
+paths:
+  # --- Authentication ---
+  # --- Onboarding ---
+  /onboarding/units:
+    get:
+      tags: [Onboarding]
+      summary: List units/houses for onboarding
+      responses: { '200': { description: OK } }
+  /onboarding/blocks:
+    get:
+      tags: [Onboarding]
+      summary: List blocks for onboarding
+      responses: { '200': { description: OK } }
+  /onboarding/check-username:
+    get:
+      tags: [Onboarding]
+      summary: Check username availability
+      parameters:
+        - name: username
+          in: query
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /onboarding/register:
+    post:
+      tags: [Onboarding]
+      summary: Register new household
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kk_number, head_full_name, username, password]
+              properties:
+                kk_number: { type: string }
+                head_full_name: { type: string }
+                head_nik: { type: string }
+                username: { type: string }
+                password: { type: string }
+                phone: { type: string }
+                address: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # --- Registrations (Admin) ---
+  /registrations:
+    get:
+      tags: [Admin Operations]
+      summary: List pending registrations
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /registrations/{id}:
+    get:
+      tags: [Admin Operations]
+      summary: Get registration detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /registrations/{id}/approve:
+    post:
+      tags: [Admin Operations]
+      summary: Approve registration
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /registrations/{id}/reject:
+    post:
+      tags: [Admin Operations]
+      summary: Reject registration
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+
+  # --- Authentication ---
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+
+  /auth/me:
+    get:
+      tags: [Authentication]
+      summary: Get current profile
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Person' }
+    put:
+      tags: [Authentication]
+      summary: Update current profile
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+
+  # --- Users (Admin) ---
+  /users:
+    get:
+      tags: [Admin Operations]
+      summary: List users
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: role_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [Admin Operations]
+      summary: Create user
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [person_id, username, password]
+              properties:
+                person_id: { type: integer }
+                username: { type: string }
+                email: { type: string }
+                password: { type: string }
+                role_names: { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /users/{id}:
+    get:
+      tags: [Admin Operations]
+      summary: Get user detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+    put:
+      tags: [Admin Operations]
+      summary: Update user
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /users/{id}/roles:
+    put:
+      tags: [Admin Operations]
+      summary: Update user roles
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+
+  # --- Roles & Permissions ---
+  /roles:
+    get:
+      tags: [Admin Operations]
+      summary: List roles
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [Admin Operations]
+      summary: Create role
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                guard_name: { type: string, default: web }
+                permission_names: { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /roles/{id}:
+    get:
+      tags: [Admin Operations]
+      summary: Get role detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+    put:
+      tags: [Admin Operations]
+      summary: Update role
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+    delete:
+      tags: [Admin Operations]
+      summary: Delete role
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /roles/{id}/permissions:
+    put:
+      tags: [Admin Operations]
+      summary: Set role permissions
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+  /permissions:
+    get:
+      tags: [Admin Operations]
+      summary: List all permissions
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+
+  # --- Population ---
+  /persons:
+    get:
+      tags: [Population]
+      summary: List persons
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          description: Search by name, NIK, or phone
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/Person' }
+    post:
+      tags: [Population]
+      summary: Create person
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Person' }
+  /persons/me:
+    get:
+      tags: [Population]
+      summary: Get current resident profile
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Person' }
+
+  /persons/{id}:
+    get:
+      tags: [Population]
+      summary: Get person detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Person' }
+    put:
+      tags: [Population]
+      summary: Update person
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Person' }
+    delete:
+      tags: [Population]
+      summary: Deactivate person (soft delete)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /households:
+    get:
+      tags: [Population]
+      summary: List households
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/Household' }
+    post:
+      tags: [Population]
+      summary: Create household
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Household' }
+  /households/{id}:
+    get:
+      tags: [Population]
+      summary: Get household detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          household: { $ref: '#/components/schemas/Household' }
+                          head: { $ref: '#/components/schemas/Person' }
+                          members:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                household_member_id: { type: integer }
+                                relationship: { type: string }
+                                person: { $ref: '#/components/schemas/Person' }
+    put:
+      tags: [Population]
+      summary: Update household
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HouseholdInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /household-members:
+    post:
+      tags: [Population]
+      summary: Add household member
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [household_id, person_id]
+              properties:
+                household_id: { type: integer }
+                person_id: { type: integer }
+                role: { type: string, default: member }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /household-members/{id}:
+    put:
+      tags: [Population]
+      summary: Update member relation
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [relationship]
+              properties:
+                relationship: { type: string }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Population]
+      summary: Remove member from household
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Houses & Occupancy ---
+  /houses:
+    get:
+      tags: [Population]
+      summary: List houses
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: block
+          in: query
+          schema: { type: string }
+        - name: unit
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [occupied, vacant] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                id: { type: integer }
+                                block: { type: string }
+                                unit: { type: string }
+                                address: { type: string }
+                                occupant_household_id: { type: integer }
+    post:
+      tags: [Population]
+      summary: Create house
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [block, unit]
+              properties:
+                block: { type: string }
+                unit: { type: string }
+                address: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /houses/{id}:
+    get:
+      tags: [Population]
+      summary: Get house detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    put:
+      tags: [Population]
+      summary: Update house
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                block: { type: string }
+                unit: { type: string }
+                address: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+
+  /house-claims:
+    get:
+      tags: [Resident Services]
+      summary: List house claims
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Resident Services]
+      summary: Submit house claim
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Created } }
+  /house-claims/{id}/approve:
+    post:
+      tags: [Finance]
+      summary: Approve payment & reconcile
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_allocations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      invoice_id: { type: integer }
+                      allocated_amount: { type: number }
+                component_allocations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      charge_component_id: { type: integer }
+                      allocated_amount: { type: number }
+      responses:
+        '200':
+          description: OK
+  /house-claims/{id}/reject:
+    post:
+      tags: [Admin Operations]
+      summary: Reject house claim
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+
+  /ownerships:
+    get:
+      tags: [Population]
+      summary: List ownership records
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Population]
+      summary: Create ownership record
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Created } }
+
+  /occupancies:
+    get:
+      tags: [Population]
+      summary: List occupancy records
+      security: [{ BearerAuth: [] }]
+      responses: { '200': { description: OK } }
+    post:
+      tags: [Population]
+      summary: Create occupancy record
+      security: [{ BearerAuth: [] }]
+      responses: { '201': { description: Created } }
+  /occupancies/{id}:
+    put:
+      tags: [Population]
+      summary: Update occupancy record
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses: { '200': { description: OK } }
+
+  # --- Vehicles ---
+  /vehicles:
+    get:
+      tags: [Population]
+      summary: List vehicles
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: person_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/Vehicle' }
+    post:
+      tags: [Population]
+      summary: Create vehicle
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Vehicle' }
+  /vehicles/{id}:
+    put:
+      tags: [Population]
+      summary: Update vehicle
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VehicleInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Vehicle' }
+    delete:
+      tags: [Population]
+      summary: Delete vehicle
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # --- Billing / Charges ---
+  /charge-types:
+    get:
+      tags: [Finance]
+      summary: List charge types
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [Finance]
+      summary: Create charge type
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /charge-types/{id}:
+    get:
+      tags: [Finance]
+      summary: Get charge type detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    put:
+      tags: [Finance]
+      summary: Update charge type
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    delete:
+      tags: [Finance]
+      summary: Delete charge type
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  /charge-components:
+    get:
+      tags: [Finance]
+      summary: List charge components
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Finance]
+      summary: Create charge component
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /charge-components/{id}:
+    put:
+      tags: [Finance]
+      summary: Update charge component
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Finance]
+      summary: Delete charge component
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /charge-components/reorder:
+    post:
+      tags: [Finance]
+      summary: Reorder charge components
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+
+  /billing/generate:
+    post:
+      tags: [Finance]
+      summary: Bulk generate invoices
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+
+  # --- Invoices ---
+  /invoices:
+    get:
+      tags: [Finance]
+      summary: List invoices
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: household_id
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [unpaid, partial, paid] }
+        - name: period
+          in: query
+          description: YYYY-MM
+          schema: { type: string }
+        - name: charge_type_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/Invoice' }
+    post:
+      tags: [Finance]
+      summary: Create manual invoice
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [household_id, charge_type_id, period, total_amount]
+              properties:
+                household_id: { type: integer }
+                charge_type_id: { type: integer }
+                period: { type: string, description: "YYYY-MM" }
+                total_amount: { type: number }
+                status: { type: string, enum: [unpaid, partial, paid] }
+                note: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Invoice' }
+  /invoices/{id}:
+    get:
+      tags: [Finance]
+      summary: Get invoice detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          invoice: { $ref: '#/components/schemas/Invoice' }
+                          lines: { type: array, items: { type: object } }
+                          invoice_allocations: { type: array, items: { type: object } }
+                          component_allocations: { type: array, items: { type: object } }
+    put:
+      tags: [Finance]
+      summary: Update invoice
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+                status: { type: string, enum: [unpaid, partial, paid] }
+                total_amount: { type: number }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    delete:
+      tags: [Finance]
+      summary: Delete invoice
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /my/invoices:
+    get:
+      tags: [Resident Specific (My)]
+      summary: List my invoices
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [unpaid, partial, paid] }
+        - name: period
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /my/invoices/{id}:
+    get:
+      tags: [Resident Specific (My)]
+      summary: Get my invoice detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /my/invoices/ensure:
+    post:
+      tags: [Resident Specific (My)]
+      summary: Ensure invoice existence for current period
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+  /my/invoices/preview:
+    post:
+      tags: [Resident Specific (My)]
+      summary: Preview invoice generation
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+
+  # --- Payments ---
+  /payments:
+    get:
+      tags: [Finance]
+      summary: List all payment proofs
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected] }
+        - name: payer_household_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 30 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items: { $ref: '#/components/schemas/Payment' }
+    post:
+      tags: [Finance]
+      summary: Submit payment proof
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, invoice_ids]
+              properties:
+                amount: { type: number }
+                invoice_ids:
+                  type: array
+                  items: { type: integer }
+                paid_at: { type: string, format: "date-time" }
+                proof_file_url: { type: string }
+                note: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/Payment' }
+  /payments/{id}:
+    get:
+      tags: [Finance]
+      summary: Get payment detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          payment: { $ref: '#/components/schemas/Payment' }
+                          intents: { type: array, items: { type: object } }
+                          invoice_allocations: { type: array, items: { type: object } }
+                          component_allocations: { type: array, items: { type: object } }
+  /payments/{id}/approve:
+    post:
+      tags: [Finance]
+      summary: Approve payment proof
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                invoice_allocations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      invoice_id: { type: integer }
+                      allocated_amount: { type: number }
+                component_allocations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      charge_component_id: { type: integer }
+                      allocated_amount: { type: number }
+      responses:
+        '200':
+          description: OK
+  /payments/{id}/reject:
+    post:
+      tags: [Finance]
+      summary: Reject payment proof
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Ledger ---
+  /ledger/accounts:
+    get:
+      tags: [Finance]
+      summary: List ledger accounts
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Finance]
+      summary: Create ledger account
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /ledger/accounts/{id}:
+    get:
+      tags: [Finance]
+      summary: Get ledger account detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Finance]
+      summary: Update ledger account
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Finance]
+      summary: Delete ledger account
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /ledger/entries:
+    get:
+      tags: [Finance]
+      summary: List ledger entries
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Finance]
+      summary: Create manual ledger entry
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+
+  # --- Community Content ---
+  /posts:
+    get:
+      tags: ["Community & Content"]
+      summary: List posts
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Community & Content"]
+      summary: Create post
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, content]
+              properties:
+                title: { type: string }
+                content: { type: string }
+                category_id: { type: integer }
+                image_urls: { type: array, items: { type: string } }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /posts/{id}:
+    get:
+      tags: ["Community & Content"]
+      summary: Get post detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Community & Content"]
+      summary: Update post
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete post
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /events:
+    get:
+      tags: ["Community & Content"]
+      summary: List events
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [upcoming, past] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Community & Content"]
+      summary: Create event
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, start_at]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                start_at: { type: string, format: date-time }
+                end_at: { type: string, format: date-time }
+                location: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /events/{id}:
+    get:
+      tags: ["Community & Content"]
+      summary: Get event detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Community & Content"]
+      summary: Update event
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete event
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Polls ---
+  /polls:
+    get:
+      tags: ["Community & Content"]
+      summary: List polls
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, published, closed] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Community & Content"]
+      summary: Create poll
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, end_at]
+              properties:
+                title: { type: string }
+                description: { type: string }
+                end_at: { type: string, format: date-time }
+                options:
+                  type: array
+                  items:
+                    type: object
+                    required: [text]
+                    properties:
+                      text: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /polls/{id}:
+    get:
+      tags: ["Community & Content"]
+      summary: Get poll detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Community & Content"]
+      summary: Update poll
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete poll
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /polls/{id}/publish:
+    post:
+      tags: ["Community & Content"]
+      summary: Publish poll
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /polls/{id}/close:
+    post:
+      tags: ["Community & Content"]
+      summary: Close poll
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /polls/{id}/vote:
+    post:
+      tags: ["Community & Content"]
+      summary: Cast vote
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /polls/{id}/my-vote:
+    get:
+      tags: ["Community & Content"]
+      summary: Get current user vote for poll
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /polls/{id}/result:
+    get:
+      tags: ["Community & Content"]
+      summary: Get poll results
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /polls/options:
+    post:
+      tags: ["Community & Content"]
+      summary: Create poll option
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /polls/options/{id}:
+    put:
+      tags: ["Community & Content"]
+      summary: Update poll option
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete poll option
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Fundraisers ---
+  /fundraisers:
+    get:
+      tags: ["Community & Content"]
+      summary: List fundraisers
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: ["Community & Content"]
+      summary: Create fundraiser
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /fundraisers/{id}:
+    get:
+      tags: ["Community & Content"]
+      summary: Get fundraiser detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Community & Content"]
+      summary: Update fundraiser
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete fundraiser
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /fundraisers/{id}/close:
+    post:
+      tags: ["Community & Content"]
+      summary: Close fundraiser campaign
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /fundraisers/{id}/donate:
+    post:
+      tags: ["Community & Content"]
+      summary: Submit donation proof
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '201':
+          description: Created
+  /fundraisers/{id}/donations:
+    get:
+      tags: ["Community & Content"]
+      summary: List donations for fundraiser
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /fundraisers/donations:
+    get:
+      tags: [Admin Operations]
+      summary: List all donations (Admin)
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: fundraiser_id
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /fundraisers/donations/{id}/approve:
+    post:
+      tags: [Admin Operations]
+      summary: Approve donation
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /fundraisers/donations/{id}/reject:
+    post:
+      tags: [Admin Operations]
+      summary: Reject donation
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /fundraisers/{id}/updates:
+    get:
+      tags: ["Community & Content"]
+      summary: List fundraiser progress updates
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /fundraisers/updates:
+    post:
+      tags: ["Community & Content"]
+      summary: Create progress update
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /fundraisers/updates/{id}:
+    put:
+      tags: ["Community & Content"]
+      summary: Update progress update
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete progress update
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Guest Visits ---
+  /guest-visits:
+    get:
+      tags: [Resident Services]
+      summary: List all guest visits
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Resident Services]
+      summary: Record new guest visit
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /guest-visits/{id}/check-out:
+    post:
+      tags: [Resident Services]
+      summary: Record guest check-out
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /my/guest-visits:
+    get:
+      tags: [Resident Specific (My)]
+      summary: List my household guest visits
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, completed] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # --- Emergencies ---
+  /emergencies:
+    get:
+      tags: [Resident Services]
+      summary: List all emergency reports
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, acknowledged, resolved, cancelled] }
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [Resident Services]
+      summary: Submit SOS report
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, enum: [medical, fire, crime, accident, lost_child, other] }
+                house_id: { type: integer }
+                location: { type: string }
+                note: { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /emergencies/{id}/acknowledge:
+    post:
+      tags: [Resident Services]
+      summary: Acknowledge emergency report
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /emergencies/{id}/resolve:
+    post:
+      tags: [Resident Services]
+      summary: Resolve emergency report
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolution_note: { type: string }
+      responses:
+        '200':
+          description: OK
+  /emergencies/{id}/cancel:
+    post:
+      tags: [Resident Services]
+      summary: Cancel SOS report
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /my/emergencies:
+    get:
+      tags: [Resident Specific (My)]
+      summary: List my emergency reports
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, acknowledged, resolved, cancelled] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+  # --- Feedback ---
+  /feedback-categories:
+    get:
+      tags: [Resident Services]
+      summary: List feedback categories
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+  /feedbacks:
+    get:
+      tags: [Resident Services]
+      summary: List all feedbacks
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, responded, closed] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: [Resident Services]
+      summary: Submit feedback/complaint
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, message]
+              properties:
+                title: { type: string }
+                message: { type: string }
+                category_id: { type: integer }
+                house_id: { type: integer }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /feedbacks/{id}:
+    get:
+      tags: [Resident Services]
+      summary: Get feedback detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /feedbacks/{id}/respond:
+    post:
+      tags: [Resident Services]
+      summary: Respond to feedback
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                is_public: { type: integer, enum: [0, 1], default: 1 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /feedbacks/{id}/close:
+    post:
+      tags: [Resident Services]
+      summary: Close feedback ticket
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /my/feedbacks:
+    get:
+      tags: [Resident Specific (My)]
+      summary: List my feedbacks
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, responded, closed] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /my/feedbacks/{id}:
+    get:
+      tags: [Resident Specific (My)]
+      summary: Get my feedback detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- UMKM (Businesses & Products) ---
+  /businesses:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: List local businesses
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, active, rejected] }
+        - name: category_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Register business
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, owner_person_id, category_id]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                owner_person_id: { type: integer }
+                category_id: { type: integer }
+                status: { type: string, enum: [pending, active, rejected] }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /businesses/{id}:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: Get business detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Assets & Businesses"]
+      summary: Update business
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /businesses/{id}/approve:
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Approve business registration
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /businesses/{id}/reject:
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Reject business registration
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /businesses/{id}/products:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: List products for business
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  /products:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: List all products
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: business_id
+          in: query
+          schema: { type: integer }
+        - name: category_id
+          in: query
+          schema: { type: integer }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Create product
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [business_id, name, price]
+              properties:
+                business_id: { type: integer }
+                name: { type: string }
+                description: { type: string }
+                price: { type: number }
+                stock: { type: number, default: 0 }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /products/{id}:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: Get product detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Assets & Businesses"]
+      summary: Update product
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Assets & Businesses"]
+      summary: Delete product
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Inventory ---
+  /inventories:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: List inventory assets
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category_id
+          in: query
+          schema: { type: integer }
+        - name: condition
+          in: query
+          schema: { type: string, enum: [good, fair, poor, broken] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [available, borrowed, lost, disposed] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Create inventory item
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category_id]
+              properties:
+                name: { type: string }
+                description: { type: string }
+                category_id: { type: integer }
+                condition: { type: string, enum: [good, fair, poor, broken], default: good }
+                status: { type: string, enum: [available, borrowed, lost, disposed], default: available }
+                acquisition_date: { type: string, format: date }
+                acquisition_cost: { type: number }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+  /inventories/{id}:
+    get:
+      tags: ["Assets & Businesses"]
+      summary: Get inventory item detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Assets & Businesses"]
+      summary: Update inventory item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /inventories/{id}/archive:
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Archive inventory item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /inventories/{id}/checkout:
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Borrow/Checkout inventory item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /inventories/{id}/return:
+    post:
+      tags: ["Assets & Businesses"]
+      summary: Return inventory item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Important Contacts ---
+  /important-contacts:
+    get:
+      tags: [Resident Services]
+      summary: List important contacts
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Resident Services]
+      summary: Create important contact
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /important-contacts/{id}:
+    get:
+      tags: [Resident Services]
+      summary: Get contact detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Resident Services]
+      summary: Update contact
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Resident Services]
+      summary: Delete contact
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Meeting Minutes ---
+  /meeting-minutes:
+    get:
+      tags: ["Community & Content"]
+      summary: List meeting minutes
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: ["Community & Content"]
+      summary: Create meeting minutes
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+  /meeting-minutes/{id}:
+    get:
+      tags: ["Community & Content"]
+      summary: Get meeting minutes detail
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: ["Community & Content"]
+      summary: Update meeting minutes
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete meeting minutes
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+  /meeting-minutes/{id}/action-items:
+    post:
+      tags: ["Community & Content"]
+      summary: Create action item for meeting
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '201':
+          description: Created
+
+  /meeting-action-items/{id}:
+    put:
+      tags: ["Community & Content"]
+      summary: Update action item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: ["Community & Content"]
+      summary: Delete action item
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: OK
+
+  # --- Uploads ---
+  /uploads/image:
+    post:
+      tags: [Admin Operations]
+      summary: Upload image file
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: Created
+
+  # --- Dashboard & Audit ---
+  /dashboard/summary:
+    get:
+      tags: [Admin Operations]
+      summary: Get dashboard summary numbers
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+  /dashboard/finance:
+    get:
+      tags: [Admin Operations]
+      summary: Get dashboard financial summary
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+  /dashboard/activity:
+    get:
+      tags: [Admin Operations]
+      summary: Get dashboard recent activity
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: OK
+
+  /audit-logs:
+    get:
+      tags: [Admin Operations]
+      summary: List audit logs
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: user_id
+          in: query
+          schema: { type: integer }
+        - name: auditable_type
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    LoginResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        data:
+          type: object
+          properties:
+            token: { type: string }
+            me: { $ref: '#/components/schemas/Person' }
+    
+    Person:
+      type: object
+      properties:
+        id: { type: integer }
+        nik: { type: string }
+        full_name: { type: string }
+        gender: { type: string, enum: [M, F] }
+        birth_place: { type: string }
+        birth_date: { type: string, format: date }
+        religion: { type: string }
+        blood_type: { type: string, enum: [A, B, AB, O, UNKNOWN] }
+        marital_status: { type: string, enum: [single, married, divorced, widowed] }
+        education: { type: string }
+        occupation: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        status: { type: string, enum: [active, moved, left] }
+    
+    PersonInput:
+      type: object
+      required: [nik, full_name, gender, birth_place, birth_date, religion, marital_status]
+      properties:
+        nik: { type: string }
+        full_name: { type: string }
+        gender: { type: string, enum: [M, F] }
+        birth_place: { type: string }
+        birth_date: { type: string, format: date }
+        religion: { type: string }
+        blood_type: { type: string, enum: [A, B, AB, O, UNKNOWN] }
+        marital_status: { type: string, enum: [single, married, divorced, widowed] }
+        education: { type: string }
+        occupation: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        status: { type: string, enum: [active, moved, left] }
+
+    Household:
+      type: object
+      properties:
+        id: { type: integer }
+        kk_number: { type: string }
+        head_person_id: { type: integer }
+        head_person_name: { type: string }
+    
+    HouseholdInput:
+      type: object
+      required: [kk_number, head_person_id]
+      properties:
+        kk_number: { type: string }
+        head_person_id: { type: integer }
+
+    Vehicle:
+      type: object
+      properties:
+        id: { type: integer }
+        person_id: { type: integer }
+        person_name: { type: string }
+        type: { type: string, enum: [motor, mobil, lainnya] }
+        plate_number: { type: string }
+        brand: { type: string }
+        color: { type: string }
+        status: { type: string }
+
+    VehicleInput:
+      type: object
+      required: [type, plate_number]
+      properties:
+        person_id: { type: integer, description: "Required for admin, automatically set for residents" }
+        type: { type: string, enum: [motor, mobil, lainnya] }
+        plate_number: { type: string }
+        brand: { type: string }
+        color: { type: string }
+
+    Invoice:
+      type: object
+      properties:
+        id: { type: integer }
+        household_id: { type: integer }
+        charge_type_id: { type: integer }
+        period: { type: string, description: "YYYY-MM" }
+        total_amount: { type: number }
+        status: { type: string, enum: [unpaid, partial, paid] }
+        note: { type: string }
+
+    Payment:
+      type: object
+      properties:
+        id: { type: integer }
+        payer_household_id: { type: integer }
+        amount: { type: number }
+        paid_at: { type: string, format: "date-time" }
+        proof_file_url: { type: string }
+        status: { type: string, enum: [pending, approved, rejected] }
+        note: { type: string }
+
+    ApiResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        data: { type: object }
+        meta: { $ref: '#/components/schemas/PaginatedMeta' }
+    
+    PaginatedMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        total: { type: integer }
+        total_pages: { type: integer }
+        has_prev: { type: boolean }
+        has_next: { type: boolean }
