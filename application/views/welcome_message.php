@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>SIS Harmoni API</title>
+	<title>SIS Harmoni</title>
 
 	<style type="text/css">
 	::selection { background-color: #0F766E; color: #ffffff; }
