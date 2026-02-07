@@ -25,6 +25,7 @@ services:
       - "3307:3306"
     volumes:
       - db_data:/var/lib/mysql
+      - ./sis-paguyuban-db-02022026-1.0.4.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   db_data:
