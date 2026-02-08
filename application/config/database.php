@@ -75,10 +75,10 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'db',
-	'username' => 'root',
-	'password' => 'root',
-	'database' => 'sis_harmoni',
+	'hostname' => getenv('DB_HOST') ?: 'mariadb_server',
+	'username' => getenv('DB_USER') ?: 'root',
+	'password' => getenv('DB_PASSWORD') ?: 'root',
+	'database' => getenv('DB_NAME') ?: 'sis_harmoni',
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
