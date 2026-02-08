@@ -12,3 +12,12 @@ services:
       - CI_ENV=testing
     env_file:
       - .env
+    networks:
+      - shared_apps
+
+networks:
+  shared_apps:
+    external: true
+
+volumes:
+  db_data:
