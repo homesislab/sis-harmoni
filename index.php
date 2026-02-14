@@ -97,7 +97,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
  *
  * NOTE: If you change these, also change the error_reporting() code below
  */
-	define('ENVIRONMENT', isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development');
+	$__env = getenv('ENVIRONMENT');
+	define('ENVIRONMENT', ($__env !== false && $__env !== null && $__env !== '') ? $__env : (isset($_SERVER['CI_ENV']) ? $_SERVER['CI_ENV'] : 'development'));
 
 /*
  *---------------------------------------------------------------
