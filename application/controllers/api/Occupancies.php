@@ -19,7 +19,7 @@ class Occupancies extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.houses.manage')) {
             $res = $this->OccupancyModel->paginate($page, $per);
         } else {
             $hhid = (int)($this->auth_household_id ?? 0);
@@ -32,7 +32,7 @@ class Occupancies extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.houses.manage');
 
         $in = $this->json_input();
         $house_id = (int)($in['house_id'] ?? 0);
@@ -65,7 +65,7 @@ class Occupancies extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.houses.manage');
 
         if ($id <= 0) {
             api_validation_error(['id' => 'Wajib diisi (gunakan /occupancies/{id})']);

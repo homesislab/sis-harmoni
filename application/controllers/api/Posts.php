@@ -22,8 +22,8 @@ class Posts extends MY_Controller
             'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
-        $filters['status'] = $is_admin
+        $can_manage = $this->has_permission('app.services.info.posts.manage');
+        $filters['status'] = $can_manage
             ? ($this->input->get('status') ? (string)$this->input->get('status') : null)
             : 'published';
 
@@ -33,7 +33,7 @@ class Posts extends MY_Controller
 
     public function store(): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.posts.manage']);
 
         $in = $this->json_input();
         $err = $this->PostModel->validate_payload($in, true);
@@ -41,7 +41,9 @@ class Posts extends MY_Controller
 
         $id = $this->PostModel->create($in, (int)$this->auth_user['id']);
 
-        audit_log($this, 'post_create', 'Create post #' . $id);
+        $title = trim((string)($in['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menambahkan posting', 'Menambahkan posting "' . $title . '"');
 
         api_ok($this->PostModel->find_by_id($id), null, 201);
     }
@@ -53,7 +55,7 @@ class Posts extends MY_Controller
         $row = $this->PostModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true) && $row['status'] !== 'published') {
+        if (!$this->has_permission('app.services.info.posts.manage') && $row['status'] !== 'published') {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }
@@ -63,7 +65,7 @@ class Posts extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.posts.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->PostModel->find_by_id($id);
@@ -75,14 +77,16 @@ class Posts extends MY_Controller
 
         $this->PostModel->update($id, $in);
 
-        audit_log($this, 'post_update', 'Update post #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Memperbarui posting', 'Memperbarui posting "' . $title . '"');
 
         api_ok($this->PostModel->find_by_id($id));
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.posts.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->PostModel->find_by_id($id);
@@ -90,7 +94,9 @@ class Posts extends MY_Controller
 
         $this->PostModel->delete($id);
 
-        audit_log($this, 'post_delete', 'Delete post #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menghapus posting', 'Menghapus posting "' . $title . '"');
 
         api_ok(null, ['message' => 'Post dihapus']);
     }

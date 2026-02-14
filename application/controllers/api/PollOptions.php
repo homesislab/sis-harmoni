@@ -13,7 +13,7 @@ class PollOptions extends MY_Controller
 
     public function store(): void
     {
-        $this->require_any_permission(['poll.manage']);
+        $this->require_any_permission(['app.services.info.polls.manage']);
 
         $in = $this->json_input();
         $poll_id = (int)($in['poll_id'] ?? 0);
@@ -42,14 +42,14 @@ class PollOptions extends MY_Controller
         }
 
         $id = $this->PollModel->create_option($poll_id, $label);
-        audit_log($this, 'poll_option_create', "Add option #$id to poll #$poll_id");
+        audit_log($this, 'Menambahkan opsi polling', 'Menambahkan opsi "' . $label . '" ke polling "' . ($poll['title'] ?? 'Tanpa judul') . '"');
 
         api_ok(['id' => (int)$id], null, 201);
     }
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['poll.manage']);
+        $this->require_any_permission(['app.services.info.polls.manage']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -79,14 +79,16 @@ class PollOptions extends MY_Controller
         }
 
         $this->PollModel->update_option($id, $label);
-        audit_log($this, 'poll_option_update', "Update option #$id");
+        $old = trim((string)($opt['label'] ?? ''));
+        if ($old === '') $old = 'Opsi';
+        audit_log($this, 'Memperbarui opsi polling', 'Memperbarui opsi polling "' . ($poll['title'] ?? 'Tanpa judul') . '": "' . $old . '" → "' . $label . '"');
 
         api_ok(['ok' => true]);
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['poll.manage']);
+        $this->require_any_permission(['app.services.info.polls.manage']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -109,7 +111,9 @@ class PollOptions extends MY_Controller
         }
 
         $this->PollModel->delete_option($id);
-        audit_log($this, 'poll_option_delete', "Delete option #$id");
+        $old = trim((string)($opt['label'] ?? ''));
+        if ($old === '') $old = 'Opsi';
+        audit_log($this, 'Menghapus opsi polling', 'Menghapus opsi "' . $old . '" dari polling "' . ($poll['title'] ?? 'Tanpa judul') . '"');
 
         api_ok(['ok' => true]);
     }

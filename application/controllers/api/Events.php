@@ -32,7 +32,7 @@ class Events extends MY_Controller
 
     public function store(): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.events.manage']);
 
         $in = $this->json_input();
         $err = $this->EventModel->validate_payload($in, true);
@@ -40,7 +40,9 @@ class Events extends MY_Controller
 
         $id = $this->EventModel->create($in, (int)$this->auth_user['id']);
 
-        audit_log($this, 'event_create', 'Create event #' . $id);
+        $title = trim((string)($in['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menambahkan kegiatan', 'Menambahkan kegiatan baru "' . $title . '"');
 
         api_ok($this->EventModel->find_by_id($id), null, 201);
     }
@@ -55,7 +57,7 @@ class Events extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.events.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->EventModel->find_by_id($id);
@@ -67,14 +69,16 @@ class Events extends MY_Controller
 
         $this->EventModel->update($id, $in);
 
-        audit_log($this, 'event_update', 'Update event #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Memperbarui kegiatan', 'Memperbarui kegiatan "' . $title . '"');
 
         api_ok($this->EventModel->find_by_id($id));
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['content.manage']);
+        $this->require_any_permission(['app.services.info.events.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->EventModel->find_by_id($id);
@@ -82,7 +86,9 @@ class Events extends MY_Controller
 
         $this->EventModel->delete($id);
 
-        audit_log($this, 'event_delete', 'Delete event #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menghapus kegiatan', 'Menghapus kegiatan "' . $title . '"');
 
         api_ok(null, ['message' => 'Event dihapus']);
     }

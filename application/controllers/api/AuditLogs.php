@@ -8,7 +8,7 @@ class AuditLogs extends MY_Controller
         parent::__construct();
         $this->as_api();
         $this->require_auth();
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.settings.rbac.manage');
 
         $this->load->model('Audit_log_model', 'AuditModel');
     }

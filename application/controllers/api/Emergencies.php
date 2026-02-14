@@ -13,7 +13,7 @@ class Emergencies extends MY_Controller
 
     public function index(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.security.emergencies.manage');
 
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
@@ -50,7 +50,7 @@ class Emergencies extends MY_Controller
 
     public function acknowledge(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.security.emergencies.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->EmergencyModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -65,7 +65,7 @@ class Emergencies extends MY_Controller
 
     public function resolve(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.security.emergencies.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->EmergencyModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -86,9 +86,9 @@ class Emergencies extends MY_Controller
         $row = $this->EmergencyModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.security.emergencies.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
-        if (!$is_admin && (int)($row['reporter_person_id'] ?? 0) !== $pid) {
+        if (!$can_manage && (int)($row['reporter_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }

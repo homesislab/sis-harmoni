@@ -31,7 +31,7 @@ class FundraiserUpdates extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
 
         $in = $this->json_input();
         $err = $this->UpdateModel->validate_payload($in, true);
@@ -47,13 +47,17 @@ class FundraiserUpdates extends MY_Controller
         }
 
         $id = $this->UpdateModel->create($in);
-        audit_log($this, 'fundraiser_update_create', 'Create update #' . $id);
+        $updTitle = trim((string)($in['title'] ?? ''));
+        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        $fundTitle = trim((string)($fund['title'] ?? ''));
+        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        audit_log($this, 'Menambahkan update donasi', 'Menambahkan update "' . $updTitle . '" untuk "' . $fundTitle . '"');
         api_ok($this->UpdateModel->find_by_id($id), null, 201);
     }
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
         if ($id <= 0) {
             api_not_found();
             return;
@@ -73,14 +77,16 @@ class FundraiserUpdates extends MY_Controller
         }
 
         $this->UpdateModel->update($id, $in);
-        audit_log($this, 'fundraiser_update_update', 'Update update #' . $id);
+        $updTitle = trim((string)($row['title'] ?? ''));
+        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        audit_log($this, 'Memperbarui update donasi', 'Memperbarui update donasi "' . $updTitle . '"');
 
         api_ok($this->UpdateModel->find_by_id($id));
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
         if ($id <= 0) {
             api_not_found();
             return;
@@ -93,7 +99,9 @@ class FundraiserUpdates extends MY_Controller
         }
 
         $this->UpdateModel->delete($id);
-        audit_log($this, 'fundraiser_update_delete', 'Delete update #' . $id);
+        $updTitle = trim((string)($row['title'] ?? ''));
+        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        audit_log($this, 'Menghapus update donasi', 'Menghapus update donasi "' . $updTitle . '"');
         api_ok(['ok' => true]);
     }
 }

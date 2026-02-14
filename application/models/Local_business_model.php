@@ -30,6 +30,7 @@ class Local_business_model extends CI_Model
             'address' => $data['address'] ?? null,
             'is_lapak' => isset($data['is_lapak']) ? (int)$data['is_lapak'] : 0,
             'status' => $data['status'] ?? 'pending',
+            'verification_note' => $data['verification_note'] ?? null,
             'created_by' => isset($data['created_by']) ? (int)$data['created_by'] : null,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
@@ -42,7 +43,7 @@ class Local_business_model extends CI_Model
     {
         $allowed = [
             'name','category','description','whatsapp','phone','address',
-            'is_lapak','status','approved_by','approved_at'
+            'is_lapak','status','verification_note','approved_by','approved_at'
         ];
 
         $upd = [];
@@ -120,5 +121,4 @@ class Local_business_model extends CI_Model
             ],
         ];
     }
-
 }

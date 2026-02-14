@@ -15,7 +15,7 @@ class FundraiserDonations extends MY_Controller
 
     public function index_admin(): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.finance.donations.verify']);
 
         $page = max(1, (int)$this->input->get('page'));
         $per = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
@@ -40,7 +40,7 @@ class FundraiserDonations extends MY_Controller
 
     public function approve(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.finance.donations.verify']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -84,7 +84,12 @@ class FundraiserDonations extends MY_Controller
 
             $this->db->trans_commit();
 
-            audit_log($this, 'donation_approve', "Approve donation #$id ledger_entry #$ledger_entry_id");
+            $donor = ((int)($don['is_anonymous'] ?? 0) === 1) ? 'Anonim' : trim((string)($don['full_name'] ?? 'Warga'));
+            if ($donor === '') $donor = 'Warga';
+            $fundTitle = trim((string)($fund['title'] ?? ($don['fundraiser_title'] ?? '')));
+            if ($fundTitle === '') $fundTitle = 'Program donasi';
+            $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
+            audit_log($this, 'Menyetujui donasi', 'Menyetujui donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 
             api_ok(null, ['message' => 'Donation disetujui', 'ledger_entry_id' => $ledger_entry_id]);
         } catch (Throwable $e) {
@@ -96,7 +101,7 @@ class FundraiserDonations extends MY_Controller
 
     public function reject(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.finance.donations.verify']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -116,7 +121,13 @@ class FundraiserDonations extends MY_Controller
         $note = isset($in['note']) ? trim((string)$in['note']) : null;
 
         $this->DonationModel->reject($id, (int)$this->auth_user['id'], $note);
-        audit_log($this, 'donation_reject', "Reject donation #$id");
+
+        $donor = ((int)($don['is_anonymous'] ?? 0) === 1) ? 'Anonim' : trim((string)($don['full_name'] ?? 'Warga'));
+        if ($donor === '') $donor = 'Warga';
+        $fundTitle = trim((string)($don['fundraiser_title'] ?? ''));
+        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
+        audit_log($this, 'Menolak donasi', 'Menolak donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 
         api_ok(null, ['message' => 'Donation ditolak']);
     }

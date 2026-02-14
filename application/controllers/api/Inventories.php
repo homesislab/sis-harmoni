@@ -17,12 +17,12 @@ class Inventories extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)($this->input->get('per_page') ?: 20)));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $filters = [
             'q' => $this->input->get('q') ? (string)$this->input->get('q') : null,
             'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
             'condition' => $this->input->get('condition') ? (string)$this->input->get('condition') : null,
-            'status' => $is_admin
+            'status' => $can_manage
                 ? ($this->input->get('status') ? (string)$this->input->get('status') : null)
                 : 'active',
         ];
@@ -33,7 +33,7 @@ class Inventories extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.inventories.manage');
         $in = $this->json_input();
         if (!isset($in['location_text']) && isset($in['location'])) $in['location_text'] = $in['location'];
         $err = [];
@@ -61,7 +61,7 @@ class Inventories extends MY_Controller
         $row = $this->InventoryModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true) && ($row['status'] ?? '') !== 'active') {
+        if (!$this->has_permission('app.services.notes.inventories.manage') && ($row['status'] ?? '') !== 'active') {
             api_not_found();
             return;
         }
@@ -72,7 +72,7 @@ class Inventories extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.inventories.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->InventoryModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -107,7 +107,7 @@ class Inventories extends MY_Controller
 
     public function archive(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.inventories.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->InventoryModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -124,7 +124,7 @@ class Inventories extends MY_Controller
 
     public function checkout(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.inventories.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->InventoryModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -143,7 +143,7 @@ class Inventories extends MY_Controller
 
     public function return_item(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.inventories.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->InventoryModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }

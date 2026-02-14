@@ -17,8 +17,9 @@ class Businesses extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
         $pid = (int)($this->auth_user['person_id'] ?? 0);
+
+        $can_review = $this->has_permission('app.services.requests.businesses.review');
 
         $owner_q_raw = $this->input->get('owner_person_id');
         $owner_q = ($owner_q_raw !== null && $owner_q_raw !== '') ? (int)$owner_q_raw : null;
@@ -33,7 +34,7 @@ class Businesses extends MY_Controller
         if ($is_lapak_q !== null && $is_lapak_q !== '') $filters['is_lapak'] = (int)$is_lapak_q;
         else $filters['is_lapak'] = null;
 
-        if ($is_admin) {
+        if ($can_review) {
             $filters['status'] = $this->input->get('status') ? (string)$this->input->get('status') : null;
         } else {
             $is_my = ($owner_q !== null && $owner_q === $pid && $pid > 0);
@@ -53,6 +54,7 @@ class Businesses extends MY_Controller
 
     public function store(): void
     {
+        $this->require_any_permission(['app.profile.family.umkm', 'app.services.requests.businesses.review']);
         $in = $this->json_input();
         $err = [];
         if (empty($in['name'])) $err['name'] = 'Wajib diisi';
@@ -63,7 +65,7 @@ class Businesses extends MY_Controller
         $payload['created_by'] = (int)$this->auth_user['id'];
         $payload['owner_person_id'] = (int)($this->auth_user['person_id'] ?? 0) ?: null;
         if (empty($payload['house_id']) && !empty($this->auth_house_id)) $payload['house_id'] = (int)$this->auth_house_id;
-        if (!in_array('admin', $this->auth_roles, true)) $payload['status'] = 'pending';
+        if (!$this->has_permission('app.services.requests.businesses.review')) $payload['status'] = 'pending';
 
         $id = $this->BusinessModel->create($payload);
         api_ok($this->BusinessModel->find_by_id($id), null, 201);
@@ -71,19 +73,20 @@ class Businesses extends MY_Controller
 
     public function show(int $id = 0): void
     {
+        $this->require_any_permission(['app.services.resident.umkm.view', 'app.profile.family.umkm', 'app.services.requests.businesses.review']);
         if ($id <= 0) { api_not_found(); return; }
 
         $biz = $this->BusinessModel->find_by_id($id);
         if (!$biz) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
 
-        if (!$is_admin) {
+        if (!$can_review) {
             $is_owner = ((int)($biz['owner_person_id'] ?? 0) === $pid);
             $is_active = (($biz['status'] ?? '') === 'active');
             if (!$is_active && !$is_owner) {
-                api_not_found(); // lebih aman daripada 403 untuk publik
+                api_not_found();
                 return;
             }
         }
@@ -93,13 +96,14 @@ class Businesses extends MY_Controller
 
     public function update(int $id = 0): void
     {
+        $this->require_any_permission(['app.profile.family.umkm', 'app.services.requests.businesses.review']);
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->BusinessModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
-        if (!$is_admin && (int)($row['owner_person_id'] ?? 0) !== $pid) {
+        if (!$can_review && (int)($row['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }
@@ -111,13 +115,14 @@ class Businesses extends MY_Controller
 
     public function approve(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.requests.businesses.review']);
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->BusinessModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
         $this->BusinessModel->update($id, [
             'status' => 'active',
+            'verification_note' => null,
             'approved_by' => (int)$this->auth_user['id'],
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
@@ -126,35 +131,72 @@ class Businesses extends MY_Controller
 
     public function reject(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.requests.businesses.review']);
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->BusinessModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
+        $in = $this->json_input();
+        $reason = trim((string)($in['reason'] ?? ''));
+        if ($reason === '') {
+            api_validation_error(['reason' => 'Wajib diisi']);
+            return;
+        }
+
         $this->BusinessModel->update($id, [
             'status' => 'rejected',
+            'verification_note' => $reason,
             'approved_by' => (int)$this->auth_user['id'],
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
         api_ok($this->BusinessModel->find_by_id($id));
     }
 
+    public function resubmit(int $id = 0): void
+    {
+        $this->require_any_permission(['app.profile.family.umkm']);
+        if ($id <= 0) { api_not_found(); return; }
+        $row = $this->BusinessModel->find_by_id($id);
+        if (!$row) { api_not_found(); return; }
+
+        $pid = (int)($this->auth_user['person_id'] ?? 0);
+        if ((int)($row['owner_person_id'] ?? 0) !== $pid) {
+            api_error('FORBIDDEN', 'Akses ditolak', 403);
+            return;
+        }
+
+        if (($row['status'] ?? '') !== 'rejected') {
+            api_error('INVALID_STATE', 'Hanya bisa ajukan ulang jika status Perlu perbaikan', 422);
+            return;
+        }
+
+        $this->BusinessModel->update($id, [
+            'status' => 'pending',
+            'verification_note' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
+
+        api_ok($this->BusinessModel->find_by_id($id));
+    }
+
     public function products(int $id = 0): void
     {
+        $this->require_any_permission(['app.services.resident.umkm.view', 'app.profile.family.umkm', 'app.services.requests.businesses.review']);
         if ($id <= 0) { api_not_found(); return; }
         $biz = $this->BusinessModel->find_by_id($id);
         if (!$biz) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
         $is_owner = ((int)($biz['owner_person_id'] ?? 0) === $pid);
 
-        if (!$is_admin && !$is_owner && ($biz['status'] ?? '') !== 'active') {
+        if (!$can_review && !$is_owner && ($biz['status'] ?? '') !== 'active') {
             api_error('FORBIDDEN', 'Lapak belum aktif', 403);
             return;
         }
 
-        $status = (!$is_admin && !$is_owner) ? 'active' : null; // null = all
+        $status = (!$can_review && !$is_owner) ? 'active' : null; // null = all
         $items = $this->ProductModel->list_by_business($id, $status);
         api_ok(['items'=>$items]);
     }

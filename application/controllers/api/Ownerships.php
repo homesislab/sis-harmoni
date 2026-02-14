@@ -19,7 +19,7 @@ class Ownerships extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.houses.manage')) {
             $res = $this->OwnershipModel->paginate($page, $per);
         } else {
             if (empty($this->auth_user['person_id'])) {
@@ -34,7 +34,7 @@ class Ownerships extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.houses.manage');
 
         $in = $this->json_input();
         $house_id = (int)($in['house_id'] ?? 0);

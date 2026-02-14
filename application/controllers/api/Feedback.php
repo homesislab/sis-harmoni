@@ -15,7 +15,7 @@ class Feedback extends MY_Controller
 
     public function index(): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.info.feedback.view']);
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
         $filters = [
@@ -28,6 +28,7 @@ class Feedback extends MY_Controller
 
     public function store(): void
     {
+        $this->require_any_permission(['app.services.resident.feedback.create']);
         $in = $this->json_input();
         $err = [];
         if (empty($in['title'])) $err['title'] = 'Wajib diisi';
@@ -49,7 +50,7 @@ class Feedback extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.info.feedback.view']);
         if ($id <= 0) { api_not_found(); return; }
         $fb = $this->FeedbackModel->find_by_id($id);
         if (!$fb) { api_not_found(); return; }
@@ -60,7 +61,7 @@ class Feedback extends MY_Controller
 
     public function respond(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.info.feedback.respond']);
         if ($id <= 0) { api_not_found(); return; }
         $fb = $this->FeedbackModel->find_by_id($id);
         if (!$fb) { api_not_found(); return; }
@@ -85,7 +86,7 @@ class Feedback extends MY_Controller
 
     public function close(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_any_permission(['app.services.info.feedback.respond']);
         if ($id <= 0) { api_not_found(); return; }
         $fb = $this->FeedbackModel->find_by_id($id);
         if (!$fb) { api_not_found(); return; }

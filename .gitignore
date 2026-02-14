@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Env
+.env
+
+# PHP dependencies
+vendor/
+
+# CodeIgniter runtime
+application/logs/*
+!application/logs/index.html
+application/cache/*
+!application/cache/index.html
+
+# Uploads (runtime)
+uploads/*
+!uploads/.gitkeep
+
+# Node/Build (if any)
+node_modules/
+dist/
+build/

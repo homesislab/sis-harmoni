@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>SIS Harmoni</title>
+	<title>SIS Paguyuban API</title>
 
 	<style type="text/css">
 	::selection { background-color: #0F766E; color: #ffffff; }
@@ -87,7 +87,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <body>
 
 <div id="container">
-	<h1>SIS Harmoni</h1>
+	<h1>SIS Paguyuban API</h1>
 
 	<div id="body">
 		<p>
@@ -96,7 +96,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 		<h2>📌 Tentang</h2>
 		<p>
-			Ini adalah <strong>API resmi SIS Harmoni</strong> untuk pengelolaan data warga,
+			Ini adalah <strong>API resmi SIS Paguyuban</strong> (backend) untuk pengelolaan data warga,
 			keuangan, konten, polling, dan aktivitas Paguyuban & DKM
 			di lingkungan <strong>Sharia Islamic Soreang</strong>.
 		</p>
@@ -116,14 +116,18 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 		<p>
 			Referensi kontrak API tersedia melalui:
 		</p>
-		<code>api_openapi.json</code>
+		<code>api_openapi.json</code> (jika tersedia di server)
 
 		<p>
 			Disarankan menggunakan <strong>Postman Collection</strong>
 			yang telah disediakan untuk pengujian endpoint.
 		</p>
 
-		<h2>⚠️ Catatan</h2>
+		
+		<p>
+			Untuk panduan setup developer, lihat <code>README.md</code> di root project.
+		</p>
+<h2>⚠️ Catatan</h2>
 		<p>
 			Halaman ini hanya sebagai <em>health entry point</em>.
 			Akses langsung via browser <strong>bukan</strong> cara penggunaan API.

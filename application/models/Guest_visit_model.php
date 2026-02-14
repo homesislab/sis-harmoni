@@ -79,7 +79,11 @@ class Guest_visit_model extends CI_Model
             ->join('houses h','h.id=gv.house_id','left')
             ->join('persons p','p.id=gv.host_person_id','left');
 
-        if (!empty($filters['house_id'])) $qb->where('gv.house_id', (int)$filters['house_id']);
+        if (!empty($filters['house_ids']) && is_array($filters['house_ids'])) {
+            $ids = array_values(array_filter(array_map('intval', $filters['house_ids'])));
+            if ($ids) $qb->where_in('gv.house_id', $ids);
+        }
+
         if (!empty($filters['created_by'])) $qb->where('gv.created_by', (int)$filters['created_by']);
         if (!empty($filters['status'])) $qb->where('gv.status', (string)$filters['status']);
         if (!empty($filters['destination_type'])) $qb->where('gv.destination_type', (string)$filters['destination_type']);

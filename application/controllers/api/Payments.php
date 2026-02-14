@@ -25,12 +25,12 @@ class Payments extends MY_Controller
             'payer_household_id' => $this->input->get('payer_household_id') ? (int)$this->input->get('payer_household_id') : null,
         ];
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.finance.payments.verify')) {
             $hhid = (int)($this->auth_household_id ?? 0);
             if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
             $filters['payer_household_id'] = $hhid;
         } else {
-            $this->require_any_permission(['finance.verify','billing.manage']);
+            $this->require_any_permission(['app.services.finance.payments.verify']);
         }
 
         $res = $this->PaymentModel->paginate($page,$per,$filters);
@@ -82,7 +82,18 @@ class Payments extends MY_Controller
 
         $this->db->trans_complete();
 
-        audit_log($this,'payment_create','Create payment #'.$id);
+        $amt = number_format((float)$amount, 0, ',', '.');
+        $labels = array_map(function($x){
+            $name = $x['charge_name'] ?? 'Tagihan';
+            $period = $x['period'] ?? '';
+            return trim($name . ' ' . $period);
+        }, $valid);
+        $labels = array_values(array_filter($labels, fn($v)=>$v!==''));
+        $shown = array_slice($labels, 0, 2);
+        $more = max(0, count($labels) - count($shown));
+        $labelText = $shown ? implode(', ', $shown) : 'tagihan terpilih';
+        if ($more > 0) $labelText .= ' (+' . $more . ' lagi)';
+        audit_log($this,'Mengirim konfirmasi pembayaran','Mengirim konfirmasi pembayaran Rp ' . $amt . ' untuk ' . $labelText);
         api_ok($this->PaymentModel->find_by_id($id), null, 201);
     }
 
@@ -93,14 +104,14 @@ class Payments extends MY_Controller
         $pay = $this->PaymentModel->find_by_id($id);
         if (!$pay) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.finance.payments.verify')) {
             $hhid = (int)($this->auth_household_id ?? 0);
             if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
             if ((int)($pay['payer_household_id'] ?? 0) !== $hhid) {
                 api_error('FORBIDDEN','Tidak punya akses',403); return;
             }
         } else {
-            $this->require_any_permission(['finance.verify','billing.manage']);
+            $this->require_any_permission(['app.services.finance.payments.verify']);
         }
 
         $intents = $this->PaymentModel->list_intents($id);
@@ -125,7 +136,7 @@ class Payments extends MY_Controller
 
     public function approve(int $id = 0): void
     {
-        $this->require_any_permission(['finance.verify','billing.manage']);
+        $this->require_any_permission(['app.services.finance.payments.verify']);
         if ($id <= 0) { api_not_found(); return; }
 
         $pay = $this->PaymentModel->find_by_id($id);
@@ -220,13 +231,25 @@ class Payments extends MY_Controller
 
         $this->db->trans_complete();
 
-        audit_log($this,'payment_approve','Approve payment #'.$id);
+        $amt = number_format((float)($pay['amount'] ?? 0), 0, ',', '.');
+        $intentInvoices = $this->PaymentModel->list_intent_invoices($id);
+        $labels = array_map(function($x){
+            $name = $x['charge_name'] ?? 'Tagihan';
+            $period = $x['period'] ?? '';
+            return trim($name . ' ' . $period);
+        }, $intentInvoices ?: []);
+        $labels = array_values(array_filter($labels, fn($v)=>$v!==''));
+        $shown = array_slice($labels, 0, 2);
+        $more = max(0, count($labels) - count($shown));
+        $labelText = $shown ? implode(', ', $shown) : 'tagihan';
+        if ($more > 0) $labelText .= ' (+' . $more . ' lagi)';
+        audit_log($this,'Menyetujui pembayaran','Menyetujui pembayaran Rp ' . $amt . ' untuk ' . $labelText);
         api_ok($this->PaymentModel->find_by_id($id));
     }
 
     public function reject(int $id = 0): void
     {
-        $this->require_any_permission(['finance.verify','billing.manage']);
+        $this->require_any_permission(['app.services.finance.payments.verify']);
         if ($id <= 0) { api_not_found(); return; }
 
         $pay = $this->PaymentModel->find_by_id($id);
@@ -240,7 +263,19 @@ class Payments extends MY_Controller
         $note = $in['note'] ?? ($in['reason'] ?? null);
 
         $this->PaymentModel->reject($id, (int)$this->auth_user['id'], $note);
-        audit_log($this,'payment_reject','Reject payment #'.$id);
+        $amt = number_format((float)($pay['amount'] ?? 0), 0, ',', '.');
+        $intentInvoices = $this->PaymentModel->list_intent_invoices($id);
+        $labels = array_map(function($x){
+            $name = $x['charge_name'] ?? 'Tagihan';
+            $period = $x['period'] ?? '';
+            return trim($name . ' ' . $period);
+        }, $intentInvoices ?: []);
+        $labels = array_values(array_filter($labels, fn($v)=>$v!==''));
+        $shown = array_slice($labels, 0, 2);
+        $more = max(0, count($labels) - count($shown));
+        $labelText = $shown ? implode(', ', $shown) : 'tagihan';
+        if ($more > 0) $labelText .= ' (+' . $more . ' lagi)';
+        audit_log($this,'Menolak pembayaran','Menolak pembayaran Rp ' . $amt . ' untuk ' . $labelText);
         api_ok($this->PaymentModel->find_by_id($id));
     }
 

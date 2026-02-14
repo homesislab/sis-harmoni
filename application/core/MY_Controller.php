@@ -57,14 +57,12 @@ class MY_Controller extends CI_Controller
             exit;
         }
 
-        // ✅ v1.2 AuthToken only provides verify()
         $claims = $this->authtoken->verify($token);
         if (!$claims || !is_array($claims)) {
             api_token_invalid();
             exit;
         }
 
-        // ✅ login payload stores user_id (not sub)
         $user_id = (int)($claims['user_id'] ?? 0);
         if ($user_id <= 0) {
             api_token_invalid('Token tidak valid: user_id tidak ditemukan.');
@@ -88,13 +86,11 @@ class MY_Controller extends CI_Controller
         $this->auth_roles = $rbac['roles'] ?? ($claims['roles'] ?? []);
         $this->auth_permissions = $rbac['permissions'] ?? ($claims['permissions'] ?? []);
 
-        // Resolve household_id (primary) + house_id (optional convenience)
         $pid = (int)($user['person_id'] ?? 0);
         if ($pid > 0) {
             $hhid = $this->UserModel->resolve_household_id_by_person($pid);
             $this->auth_household_id = $hhid ?: null;
 
-            // try resolve active house_id from active occupancy for this household
             if ($hhid) {
                 $hid = $this->UserModel->resolve_house_id_by_household($hhid);
                 $this->auth_house_id = $hid ?: null;
@@ -113,8 +109,10 @@ class MY_Controller extends CI_Controller
 
     protected function has_permission(string $permission): bool
     {
-        if (in_array('admin', $this->auth_roles, true)) return true; // admin bypass
-        return in_array($permission, $this->auth_permissions, true);
+        $p = trim((string)$permission);
+        if ($p === '') return false;
+        if (empty($this->auth_permissions) || !is_array($this->auth_permissions)) return false;
+        return in_array($p, $this->auth_permissions, true);
     }
 
     protected function require_permission(string $permission): void

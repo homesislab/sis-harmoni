@@ -37,9 +37,9 @@ class Products extends MY_Controller
         $biz = $this->BusinessModel->find_by_id((int)$in['business_id']);
         if (!$biz) { api_validation_error(['business_id' => 'Business tidak ditemukan']); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
-        if (!$is_admin && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
+        if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }
@@ -70,9 +70,9 @@ class Products extends MY_Controller
         $biz = $this->BusinessModel->find_by_id((int)$row['business_id']);
         if (!$biz) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
-        if (!$is_admin && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
+        if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }
@@ -91,9 +91,9 @@ class Products extends MY_Controller
         $biz = $this->BusinessModel->find_by_id((int)$row['business_id']);
         if (!$biz) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
-        if (!$is_admin && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
+        if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
         }

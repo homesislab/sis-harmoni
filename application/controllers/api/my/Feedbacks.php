@@ -14,6 +14,7 @@ class Feedbacks extends MY_Controller
 
     public function index(): void
     {
+        $this->require_any_permission(['app.services.resident.feedback.create']);
         $page = max(1, (int)$this->input->get('page'));
         $per = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
@@ -29,7 +30,7 @@ class Feedbacks extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        $this->require_role(['admin', 'resident']);
+        $this->require_any_permission(['app.services.resident.feedback.create','app.services.info.feedback.view','app.services.info.feedback.respond']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -41,7 +42,7 @@ class Feedbacks extends MY_Controller
             return;
         }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.info.feedback.view')) {
             $my_pid = (int)($this->auth_user['person_id'] ?? 0);
             $row_pid = (int)($fb['person_id'] ?? 0);
 
@@ -51,7 +52,7 @@ class Feedbacks extends MY_Controller
             }
         }
 
-        $can_see_internal = in_array('admin', $this->auth_roles, true);
+        $can_see_internal = $this->has_permission('app.services.info.feedback.view');
         $fb['responses'] = $this->ResponseModel->list_for_feedback($id, $can_see_internal);
 
         api_ok(['feedback' => $fb]);

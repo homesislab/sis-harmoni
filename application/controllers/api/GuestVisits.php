@@ -13,7 +13,7 @@ class GuestVisits extends MY_Controller
 
     public function index(): void
     {
-        $this->require_role(['admin','officer','security']);
+        $this->require_permission('app.services.security.guest_book.manage');
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
@@ -30,7 +30,7 @@ class GuestVisits extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin','officer','security']);
+        $this->require_permission('app.services.security.guest_book.manage');
 
         $in = $this->json_input();
 
@@ -102,7 +102,7 @@ class GuestVisits extends MY_Controller
 
     public function check_out(int $id = 0): void
     {
-        $this->require_role(['admin','officer','security']);
+        $this->require_permission('app.services.security.guest_book.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->GuestVisitModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }

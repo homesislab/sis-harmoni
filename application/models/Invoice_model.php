@@ -92,9 +92,39 @@ class Invoice_model extends CI_Model
             ->where('i.household_id', $household_id)
             ->group_by('i.id');
 
-        if (!empty($filters['status'])) $q->where('i.status', $filters['status']);
-        if (!empty($filters['period'])) $q->where('i.period', $filters['period']);
-        if (!empty($filters['charge_type_id'])) $q->where('i.charge_type_id', (int)$filters['charge_type_id']);
+        if (!empty($filters['status'])) {
+            $st = (string)$filters['status'];
+            if ($st === 'paid') {
+                $q->where_in('i.status', ['paid','void']);
+            } elseif ($st === 'unpaid') {
+                $q->where_not_in('i.status', ['paid','void']);
+            } else {
+                $q->where('i.status', $st);
+            }
+        }
+
+        if (!empty($filters['period'])) {
+            $q->where('i.period', (string)$filters['period']);
+        }
+
+        if (!empty($filters['period_like'])) {
+            $q->like('i.period', (string)$filters['period_like'], 'after'); // "2026-"
+        }
+
+        if (!empty($filters['charge_type_id'])) {
+            $q->where('i.charge_type_id', (int)$filters['charge_type_id']);
+        }
+
+        if (!empty($filters['q'])) {
+            $s = trim((string)$filters['q']);
+            if ($s !== '') {
+                $q->group_start();
+                $q->like('ct.name', $s);
+                $q->or_like('i.period', $s);
+                $q->or_like('i.id', $s);
+                $q->group_end();
+            }
+        }
 
         $totalQ = clone $q;
         $total = (int)$totalQ->count_all_results('', false);
@@ -106,7 +136,7 @@ class Invoice_model extends CI_Model
         return ['items'=>$items,'meta'=>api_pagination_meta($page,$per,$total)];
     }
 
-public function paginate(int $page, int $per, array $filters = []): array
+    public function paginate(int $page, int $per, array $filters = []): array
     {
         $offset = ($page - 1) * $per;
 

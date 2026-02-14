@@ -36,8 +36,33 @@
  * @filesource
  */
 
+// Load .env (CodeIgniter 3 doesn't do this by default)
+$autoload = __DIR__ . '/vendor/autoload.php';
+if (is_file($autoload)) {
+	require_once $autoload;
+	if (class_exists('Dotenv\\Dotenv')) {
+		try {
+			Dotenv\Dotenv::createImmutable(__DIR__)->safeLoad();
+			// Ensure getenv() can read values loaded from .env (CI3 often uses getenv()).
+			if (!empty($_ENV)) {
+				foreach ($_ENV as $k => $v) {
+					if ($v === null) {
+						continue;
+					}
+					if (is_array($v) || is_object($v)) {
+						continue;
+					}
+					putenv($k . '=' . (string) $v);
+				}
+			}
+		} catch (Throwable $e) {
+			// Intentionally ignore: app should still be able to boot using server env vars.
+		}
+	}
+}
+
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-$allowed = ['http://localhost:5173','http://127.0.0.1:5173','http://sis-harmoni.test'];
+$allowed = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://sis-paguyuban.test'];
 
 if ($origin && in_array($origin, $allowed, true)) {
   header("Access-Control-Allow-Origin: {$origin}");

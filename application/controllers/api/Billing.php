@@ -15,30 +15,34 @@ class Billing extends MY_Controller
 
     public function generate(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.billing.generate']);
 
         $in = $this->json_input();
         $charge_type_id = (int)($in['charge_type_id'] ?? 0);
         $period = trim((string)($in['period'] ?? ''));
-        $override_amount = array_key_exists('amount',$in) ? (float)$in['amount'] : null;
+        $override_amount = array_key_exists('amount', $in) ? (float)$in['amount'] : null;
 
-        if ($charge_type_id <= 0) { api_validation_error(['charge_type_id'=>'Wajib']); return; }
-        if ($period === '') { api_validation_error(['period'=>'Wajib (YYYY-MM)']); return; }
+        $dry_run = (int)($in['dry_run'] ?? 0) === 1;
+
+        if ($charge_type_id <= 0) { api_validation_error(['charge_type_id' => 'Wajib']); return; }
+        if ($period === '') { api_validation_error(['period' => 'Wajib (YYYY-MM)']); return; }
 
         $ct = $this->ChargeModel->find_type($charge_type_id);
         if (!$ct) { api_not_found('Charge type tidak ditemukan'); return; }
 
-        $default_amount = $override_amount !== null ? $override_amount : (float)$this->ChargeModel->sum_components($charge_type_id);
+        $default_amount = $override_amount !== null
+            ? $override_amount
+            : (float)$this->ChargeModel->sum_components($charge_type_id);
 
         $rows = $this->db->select('ho.house_id, ho.household_id, ho.occupancy_type, ho.start_date, ho.id')
             ->from('house_occupancies ho')
-            ->where('ho.status','active')
+            ->where('ho.status', 'active')
             ->where('ho.household_id IS NOT NULL', null, false)
-            ->where_in('ho.occupancy_type', ['tenant','owner_live'])
-            ->order_by('ho.house_id','ASC')
+            ->where_in('ho.occupancy_type', ['tenant', 'owner_live'])
+            ->order_by('ho.house_id', 'ASC')
             ->order_by("FIELD(ho.occupancy_type,'tenant','owner_live')", '', false)
-            ->order_by('ho.start_date','DESC')
-            ->order_by('ho.id','DESC')
+            ->order_by('ho.start_date', 'DESC')
+            ->order_by('ho.id', 'DESC')
             ->get()->result_array();
 
         $seen_house = [];
@@ -60,6 +64,11 @@ class Billing extends MY_Controller
         foreach ($household_ids as $hhid) {
             $exists = $this->InvoiceModel->find_by_household_charge_period($hhid, $charge_type_id, $period);
             if ($exists) { $skipped++; continue; }
+
+            if ($dry_run) {
+                $created++;
+                continue;
+            }
 
             $payload = [
                 'household_id' => $hhid,
@@ -87,12 +96,17 @@ class Billing extends MY_Controller
             }
         }
 
-        audit_log($this, 'billing_generate', 'Generate invoices ' . $period . ' charge_type=' . $charge_type_id);
+        audit_log(
+            $this,
+            'Membuat tagihan',
+            ($dry_run ? 'Menjalankan simulasi pembuatan tagihan ' : 'Membuat tagihan ') . 'periode ' . $period . ' untuk "' . ($ct['name'] ?? 'Jenis iuran') . '". Hasil: dibuat ' . $created . ', dilewati ' . $skipped . ', error ' . $errors
+        );
 
         api_ok([
             'period' => $period,
             'charge_type_id' => $charge_type_id,
             'default_amount' => $default_amount,
+            'dry_run' => $dry_run ? 1 : 0,
             'created' => $created,
             'skipped' => $skipped,
             'errors' => $errors,

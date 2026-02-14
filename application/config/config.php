@@ -9,7 +9,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | Jika pakai Apache/Nginx dengan docroot di project:
 | contoh: http://localhost/
 */
-$config['base_url'] = 'http://sis-harmoni.test/';
+$config['base_url'] = ($_ENV['SIS_PAGUYUBAN_BASE_URL'] ?? getenv('SIS_PAGUYUBAN_BASE_URL')) ?: 'http://localhost/';
 
 /*
 |--------------------------------------------------------------------------
@@ -208,7 +208,7 @@ $config['proxy_ips'] = '';
 
 /*
 |--------------------------------------------------------------------------
-| SIS HARMONI - API SETTINGS
+| SIS PAGUYUBAN - API SETTINGS
 |--------------------------------------------------------------------------
 | Ini sudah ada di config kamu: api_jwt_secret dan api_token_ttl.
 | Aku pertahankan (lebih aman daripada ganti nama key).

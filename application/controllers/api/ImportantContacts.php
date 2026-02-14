@@ -16,12 +16,12 @@ class ImportantContacts extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.info.contacts.manage');
 
         $filters = [
             'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
             'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
-            'is_public' => $is_admin ? null : 1,
+            'is_public' => $can_manage ? null : 1,
         ];
 
         $res = $this->ContactModel->paginate($page, $per, $filters);
@@ -30,7 +30,7 @@ class ImportantContacts extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.info.contacts.manage');
         $in = $this->json_input();
         $err = [];
         if (empty($in['name'])) $err['name'] = 'Wajib diisi';
@@ -49,7 +49,7 @@ class ImportantContacts extends MY_Controller
         $row = $this->ContactModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true) && (int)($row['is_public'] ?? 1) !== 1) {
+        if (!$this->has_permission('app.services.info.contacts.manage') && (int)($row['is_public'] ?? 1) !== 1) {
             api_not_found();
             return;
         }
@@ -59,7 +59,7 @@ class ImportantContacts extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.info.contacts.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->ContactModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -72,7 +72,7 @@ class ImportantContacts extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.info.contacts.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->ContactModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }

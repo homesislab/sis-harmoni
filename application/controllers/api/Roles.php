@@ -8,7 +8,7 @@ class Roles extends MY_Controller
         parent::__construct();
         $this->as_api();
         $this->require_auth();
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.settings.rbac.manage');
     }
 
     public function index(): void
@@ -132,7 +132,6 @@ class Roles extends MY_Controller
         $role = $this->db->get_where('roles', ['id'=>$id])->row_array();
         if (!$role) { api_not_found(); return; }
 
-        // block delete when role is assigned
         $used = (int)$this->db->from('user_roles')->where('role_id',$id)->count_all_results();
         if ($used > 0) {
             api_conflict('Role masih digunakan oleh user');

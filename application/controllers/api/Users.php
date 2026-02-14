@@ -8,7 +8,7 @@ class Users extends MY_Controller
         parent::__construct();
         $this->as_api();
         $this->require_auth();
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.settings.users.manage');
 
         $this->load->model('User_model','UserModel');
         $this->load->library('Rbac');

@@ -66,12 +66,10 @@ if (!function_exists('audit_log')) {
 
             $user_id = null;
 
-            // kalau pakai MY_Controller auth_user
             if (property_exists($CI, 'auth_user') && is_array($CI->auth_user) && !empty($CI->auth_user['id'])) {
                 $user_id = (int)$CI->auth_user['id'];
             }
 
-            // fallback: session
             if (!$user_id && $CI->session && $CI->session->userdata('user_id')) {
                 $user_id = (int)$CI->session->userdata('user_id');
             }
@@ -89,7 +87,6 @@ if (!function_exists('audit_log')) {
                 'user_agent' => $ua ? substr($ua, 0, 255) : null,
             ]);
         } catch (Throwable $e) {
-            // jangan ganggu alur utama
             log_message('error', 'audit_log failed: ' . $e->getMessage());
         }
     }
@@ -119,28 +116,23 @@ if (!function_exists('validate_proof_url')) {
         $url = $url !== null ? trim($url) : null;
         if (!$url) return null; // OPSIONAL
 
-        // ---- Allow local uploads (dev bisa http) ----
-        // upload endpoint kamu: /uploads/images/...
         $baseImages = rtrim(base_url('uploads/images/'), '/') . '/';
         if (strpos($url, $baseImages) === 0) {
             return null;
         }
 
-        // kalau suatu saat kamu pakai uploads/proofs juga, tetap allow:
         $baseProofs = rtrim(base_url('uploads/proofs/'), '/') . '/';
         if (strpos($url, $baseProofs) === 0) {
             return null;
         }
 
-        // ---- External URL: wajib https + valid ----
         if (!is_https_url($url)) {
             return 'Proof URL harus https dan valid';
         }
 
-        // external whitelist (optional)
         try {
-            $CI->config->load('sis_harmoni', true);
-            $cfg = $CI->config->item('sis_uploads', 'sis_harmoni');
+            $CI->config->load('sis_paguyuban', true);
+            $cfg = $CI->config->item('sis_uploads', 'sis_paguyuban');
             $wl  = $cfg['proof_url_whitelist_domains'] ?? [];
             $host = parse_url($url, PHP_URL_HOST);
             if (!$host) return 'Host URL tidak valid';
@@ -149,7 +141,6 @@ if (!function_exists('validate_proof_url')) {
                 return 'Domain proof URL tidak diizinkan';
             }
         } catch (Throwable $e) {
-            // kalau config tidak ada, jangan block
         }
 
         return null;

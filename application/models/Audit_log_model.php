@@ -15,7 +15,6 @@ class Audit_log_model extends CI_Model
         $a = strtolower(trim($action));
         $id = $this->extract_id($description);
 
-        // Fallback: split snake_case
         $fallback = ucwords(str_replace('_', ' ', $a));
 
         switch ($a) {
@@ -100,7 +99,6 @@ class Audit_log_model extends CI_Model
             ->limit($per, $offset)
             ->get()->result_array();
 
-        // Humanize for non-technical UI.
         foreach ($items as &$it) {
             $h = $this->humanize_action((string)($it['action'] ?? ''), (string)($it['description'] ?? ''));
             $it['action_title'] = $h['title'];

@@ -8,7 +8,7 @@ class LedgerEntries extends MY_Controller
         parent::__construct();
         $this->as_api();
         $this->require_auth();
-        $this->require_any_permission(['billing.read']);
+        $this->require_any_permission(['app.services.finance.ledger_transactions.manage']);
         $this->load->model('Ledger_model', 'LedgerModel');
     }
 

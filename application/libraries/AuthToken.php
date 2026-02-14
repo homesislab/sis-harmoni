@@ -31,7 +31,6 @@ class AuthToken
      */
     public function issue($payload = [], $ttl = null): string
     {
-        // Backward compatibility: issue(int $userId, array $claims)
         if (is_int($payload)) {
             $userId = $payload;
             $claims = is_array($ttl) ? $ttl : [];

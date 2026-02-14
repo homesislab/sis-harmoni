@@ -19,7 +19,7 @@ class Vehicles extends MY_Controller
         $person_id = $this->input->get('person_id');
         $person_id = $person_id !== null ? (int)$person_id : null;
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.vehicles.manage')) {
             $res = $this->VehicleModel->paginate_with_household($page, $per, $person_id);
         } else {
             if (empty($this->auth_user['person_id'])) {
@@ -43,7 +43,7 @@ class Vehicles extends MY_Controller
         $err = $this->VehicleModel->validate_payload($in, true);
         if ($err) { api_validation_error($err); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.master.vehicles.manage')) {
             if (empty($this->auth_user['person_id'])) {
                 api_error('FORBIDDEN', 'Akun tidak terhubung ke data warga', 403);
                 return;
@@ -67,7 +67,7 @@ class Vehicles extends MY_Controller
         $row = $this->VehicleModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.master.vehicles.manage')) {
             if (empty($this->auth_user['person_id']) || (int)$row['person_id'] !== (int)$this->auth_user['person_id']) {
                 api_error('FORBIDDEN', 'Akses ditolak', 403);
                 return;
@@ -97,7 +97,7 @@ class Vehicles extends MY_Controller
         $row = $this->VehicleModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.master.vehicles.manage')) {
             if (empty($this->auth_user['person_id']) || (int)$row['person_id'] !== (int)$this->auth_user['person_id']) {
                 api_error('FORBIDDEN', 'Akses ditolak', 403);
                 return;

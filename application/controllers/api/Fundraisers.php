@@ -20,14 +20,14 @@ class Fundraisers extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
 
         $filters = [
             'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
             'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
-        $filters['status'] = $is_admin
+        $filters['status'] = $can_manage
             ? ($this->input->get('status') ? (string)$this->input->get('status') : null)
             : 'active';
 
@@ -37,7 +37,7 @@ class Fundraisers extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
 
         $in = $this->json_input();
         $err = $this->FundraiserModel->validate_payload($in, true);
@@ -45,7 +45,9 @@ class Fundraisers extends MY_Controller
 
         $id = $this->FundraiserModel->create($in);
 
-        audit_log($this, 'fundraiser_create', 'Create fundraiser #' . $id);
+        $title = trim((string)($in['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Membuat program donasi', 'Membuat program donasi "' . $title . '"');
 
         api_ok($this->FundraiserModel->find_by_id($id), null, 201);
     }
@@ -60,7 +62,7 @@ class Fundraisers extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->FundraiserModel->find_by_id($id);
@@ -72,14 +74,16 @@ class Fundraisers extends MY_Controller
 
         $this->FundraiserModel->update($id, $in);
 
-        audit_log($this, 'fundraiser_update', 'Update fundraiser #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Memperbarui program donasi', 'Memperbarui program donasi "' . $title . '"');
 
         api_ok($this->FundraiserModel->find_by_id($id));
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->FundraiserModel->find_by_id($id);
@@ -93,14 +97,16 @@ class Fundraisers extends MY_Controller
 
         $this->FundraiserModel->delete($id);
 
-        audit_log($this, 'fundraiser_delete', 'Delete fundraiser #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menghapus program donasi', 'Menghapus program donasi "' . $title . '"');
 
         api_ok(null, ['message' => 'Fundraiser dihapus']);
     }
 
     public function close(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.finance.donation_campaigns.manage');
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->FundraiserModel->find_by_id($id);
@@ -108,7 +114,9 @@ class Fundraisers extends MY_Controller
 
         $this->FundraiserModel->set_status($id, 'closed');
 
-        audit_log($this, 'fundraiser_close', 'Close fundraiser #' . $id);
+        $title = trim((string)($row['title'] ?? ''));
+        if ($title === '') $title = 'Tanpa judul';
+        audit_log($this, 'Menutup program donasi', 'Menutup program donasi "' . $title . '"');
 
         api_ok(null, ['message' => 'Fundraiser ditutup']);
     }
@@ -129,10 +137,10 @@ class Fundraisers extends MY_Controller
         $note  = isset($in['note']) ? trim((string)$in['note']) : null;
         $is_anonymous = !empty($in['is_anonymous']) ? 1 : 0;
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
 
         $person_id = null;
-        if ($is_admin && isset($in['person_id'])) $person_id = (int)$in['person_id'];
+        if ($can_manage && isset($in['person_id'])) $person_id = (int)$in['person_id'];
         if (!$person_id) $person_id = !empty($this->auth_user['person_id']) ? (int)$this->auth_user['person_id'] : 0;
 
         $err = [];
@@ -155,7 +163,11 @@ class Fundraisers extends MY_Controller
             'is_anonymous' => $is_anonymous,
         ]);
 
-        audit_log($this, 'donation_create', "Create donation #$id fundraiser #$fundraiser_id");
+        $don = $this->DonationModel->find_by_id($id);
+        $fundTitle = trim((string)($fund['title'] ?? ($don['fundraiser_title'] ?? '')));
+        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        $amt = number_format((float)($don['amount'] ?? $amount), 0, ',', '.');
+        audit_log($this, 'Mengirim donasi', 'Mengirim donasi Rp ' . $amt . ' untuk "' . $fundTitle . '"');
 
         api_ok($this->DonationModel->find_by_id($id), null, 201);
     }
@@ -170,10 +182,10 @@ class Fundraisers extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
         $status = $this->input->get('status') ? (string)$this->input->get('status') : null;
 
-        if (!$is_admin) {
+        if (!$can_manage) {
             $status = 'approved';
         } else {
             if ($status && !in_array($status, ['pending','approved','rejected'], true)) {

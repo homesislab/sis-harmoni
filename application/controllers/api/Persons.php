@@ -14,7 +14,7 @@ class Persons extends MY_Controller
 
     public function index(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.residents.manage');
 
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
@@ -27,7 +27,7 @@ class Persons extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.residents.manage');
 
         $in = $this->json_input();
 
@@ -47,7 +47,7 @@ class Persons extends MY_Controller
     {
         if ($id <= 0) { api_not_found(); return; }
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.residents.manage')) {
             $row = $this->PersonModel->find_by_id($id);
         } else {
             if (empty($this->auth_user['person_id']) || (int)$this->auth_user['person_id'] !== $id) {
@@ -65,7 +65,7 @@ class Persons extends MY_Controller
     {
         if ($id <= 0) { api_not_found(); return; }
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $is_admin = $this->has_permission('app.services.master.residents.manage');
         if (!$is_admin) {
             if (empty($this->auth_user['person_id']) || (int)$this->auth_user['person_id'] !== $id) {
                 api_error('FORBIDDEN', 'Akses ditolak', 403);
@@ -96,7 +96,7 @@ class Persons extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.residents.manage');
 
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->PersonModel->find_by_id($id);

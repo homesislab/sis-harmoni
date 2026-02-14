@@ -14,9 +14,91 @@ class Invoices extends MY_Controller
         $this->load->model('Charge_model','ChargeModel');
     }
 
+    /**
+     * Attach payment intent aggregation to invoice rows:
+     * - pending_payment_count
+     * - last_payment_status
+     * - last_payment_note
+     * - last_payment_paid_at
+     *
+     * Source: payment_invoice_intents + payments (same as /my/invoices/show)
+     */
+    private function attach_payment_agg_to_invoices(array $items): array
+    {
+        if (empty($items)) return $items;
+
+        $ids = array_values(array_filter(array_map(function($x){
+            return (int)($x['id'] ?? 0);
+        }, $items)));
+
+        if (empty($ids)) return $items;
+
+        $rows = $this->db->select("
+                pii.invoice_id,
+                SUM(CASE WHEN p.status='pending' THEN 1 ELSE 0 END) as pending_payment_count,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.status ORDER BY p.id DESC), ',', 1) as last_payment_status,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.note ORDER BY p.id DESC SEPARATOR '||'), '||', 1) as last_payment_note,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.paid_at ORDER BY p.id DESC), ',', 1) as last_payment_paid_at
+            ", false)
+            ->from('payment_invoice_intents pii')
+            ->join('payments p', 'p.id=pii.payment_id', 'left')
+            ->where_in('pii.invoice_id', $ids)
+            ->group_by('pii.invoice_id')
+            ->get()->result_array();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $iid = (int)($r['invoice_id'] ?? 0);
+            $map[$iid] = [
+                'pending_payment_count' => (int)($r['pending_payment_count'] ?? 0),
+                'last_payment_status' => $r['last_payment_status'] ?? null,
+                'last_payment_note' => $r['last_payment_note'] ?? null,
+                'last_payment_paid_at' => $r['last_payment_paid_at'] ?? null,
+            ];
+        }
+
+        foreach ($items as &$it) {
+            $iid = (int)($it['id'] ?? 0);
+            $agg = $map[$iid] ?? [
+                'pending_payment_count' => 0,
+                'last_payment_status' => null,
+                'last_payment_note' => null,
+                'last_payment_paid_at' => null,
+            ];
+            $it = array_merge($it, $agg);
+        }
+        unset($it);
+
+        return $items;
+    }
+
+    /**
+     * Attach agg to a single invoice row (associative array)
+     */
+    private function attach_payment_agg_to_invoice(array $inv, int $invoiceId): array
+    {
+        $agg = $this->db->select("
+                SUM(CASE WHEN p.status='pending' THEN 1 ELSE 0 END) as pending_payment_count,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.status ORDER BY p.id DESC), ',', 1) as last_payment_status,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.note ORDER BY p.id DESC SEPARATOR '||'), '||', 1) as last_payment_note,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.paid_at ORDER BY p.id DESC), ',', 1) as last_payment_paid_at
+            ", false)
+            ->from('payment_invoice_intents pii')
+            ->join('payments p', 'p.id=pii.payment_id', 'left')
+            ->where('pii.invoice_id', (int)$invoiceId)
+            ->get()->row_array();
+
+        $inv['pending_payment_count'] = (int)($agg['pending_payment_count'] ?? 0);
+        $inv['last_payment_status'] = $agg['last_payment_status'] ?? null;
+        $inv['last_payment_note'] = $agg['last_payment_note'] ?? null;
+        $inv['last_payment_paid_at'] = $agg['last_payment_paid_at'] ?? null;
+
+        return $inv;
+    }
+
     public function index(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.invoices.manage']);
 
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(200, max(1, (int)$this->input->get('per_page') ?: 30));
@@ -30,12 +112,16 @@ class Invoices extends MY_Controller
         ];
 
         $res = $this->InvoiceModel->paginate($page, $per, $filters);
-        api_ok(['items' => $res['items']], $res['meta']);
+
+        $items = isset($res['items']) && is_array($res['items']) ? $res['items'] : [];
+        $items = $this->attach_payment_agg_to_invoices($items);
+
+        api_ok(['items' => $items], $res['meta'] ?? null);
     }
 
     public function store(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.invoices.manage']);
 
         $in = $this->json_input();
 
@@ -61,27 +147,41 @@ class Invoices extends MY_Controller
             'note'           => $in['note'] ?? null,
         ]);
 
-        api_ok($this->InvoiceModel->find_by_id($id), null, 201);
+        $row = $this->InvoiceModel->find_by_id($id);
+        if ($row) {
+            $row = $this->attach_payment_agg_to_invoice($row, (int)$id);
+        }
+
+        api_ok($row, null, 201);
     }
 
     public function show(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.invoices.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $inv = $this->InvoiceModel->find_by_id($id);
         if (!$inv) { api_not_found(); return; }
 
-        $lines = $this->InvoiceModel->list_lines($id);
-        $allocs = $this->PaymentModel->list_invoice_allocations_for_invoice($id);
-        $comp = $this->PaymentModel->list_component_allocations_for_invoice($id);
+        $inv = $this->attach_payment_agg_to_invoice($inv, (int)$id);
 
-        api_ok(['invoice'=>$inv,'lines'=>$lines,'invoice_allocations'=>$allocs,'component_allocations'=>$comp]);
+        $lines  = $this->InvoiceModel->list_lines($id);
+
+        $allocs = $this->PaymentModel->list_invoice_allocations_for_invoice($id);
+
+        $comp   = $this->PaymentModel->list_component_allocations_for_invoice($id);
+
+        api_ok([
+            'invoice' => $inv,
+            'lines' => $lines,
+            'invoice_allocations' => $allocs,
+            'component_allocations' => $comp
+        ]);
     }
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.invoices.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->InvoiceModel->find_by_id($id);
@@ -100,12 +200,18 @@ class Invoices extends MY_Controller
         }
 
         $this->InvoiceModel->update($id, $payload);
-        api_ok($this->InvoiceModel->find_by_id($id));
+
+        $updated = $this->InvoiceModel->find_by_id($id);
+        if ($updated) {
+            $updated = $this->attach_payment_agg_to_invoice($updated, (int)$id);
+        }
+
+        api_ok($updated);
     }
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.invoices.manage']);
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->InvoiceModel->find_by_id($id);

@@ -17,11 +17,11 @@ class MeetingMinutes extends MY_Controller
         $page = max(1, (int)$this->input->get('page'));
         $per  = min(100, max(1, (int)($this->input->get('per_page') ?: 20)));
 
-        $is_admin = in_array('admin', $this->auth_roles, true);
+        $can_manage = $this->has_permission('app.services.notes.meeting_minutes.manage');
 
         $filters = [
             'q' => $this->input->get('q') ? (string)$this->input->get('q') : null,
-            'status' => $is_admin
+            'status' => $can_manage
                 ? ($this->input->get('status') ? (string)$this->input->get('status') : null)
                 : 'published',
         ];
@@ -32,7 +32,7 @@ class MeetingMinutes extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         $in = $this->json_input();
         if (!isset($in['location_text']) && isset($in['location'])) $in['location_text'] = $in['location'];
         $err = [];
@@ -56,7 +56,7 @@ class MeetingMinutes extends MY_Controller
         $row = $this->MinutesModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true) && ($row['status'] ?? '') !== 'published') {
+        if (!$this->has_permission('app.services.notes.meeting_minutes.manage') && ($row['status'] ?? '') !== 'published') {
             api_not_found();
             return;
         }
@@ -67,7 +67,7 @@ class MeetingMinutes extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->MinutesModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -83,7 +83,7 @@ class MeetingMinutes extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->MinutesModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -93,7 +93,7 @@ class MeetingMinutes extends MY_Controller
 
     public function action_items_create(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         if ($id <= 0) { api_not_found(); return; }
         $m = $this->MinutesModel->find_by_id($id);
         if (!$m) { api_not_found(); return; }

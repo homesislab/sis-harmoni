@@ -22,7 +22,7 @@ class House extends MY_Controller
         $type   = trim((string)$this->input->get('type'));          // house|kavling
         $status_group = trim((string)$this->input->get('status_group')); // inhabited
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.houses.manage')) {
             $res = $this->HouseModel->paginate($page, $per, $q, $status, $type, $status_group);
         } else {
             if (empty($this->auth_user['person_id'])) {
@@ -42,7 +42,7 @@ class House extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.houses.manage');
 
         $in = $this->json_input();
         $err = $this->HouseModel->validate_payload($in, true);
@@ -67,7 +67,7 @@ class House extends MY_Controller
         $row = $this->HouseModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.master.houses.manage')) {
             $hhid = (int)($this->auth_household_id ?? 0);
             if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
 
@@ -82,7 +82,7 @@ class House extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.houses.manage');
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->HouseModel->find_by_id($id);

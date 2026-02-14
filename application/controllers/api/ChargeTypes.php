@@ -19,7 +19,7 @@ class ChargeTypes extends MY_Controller
 
     public function store(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
 
         $in = $this->json_input();
         $err = $this->ChargeModel->validate_type($in, true);
@@ -50,7 +50,7 @@ class ChargeTypes extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -75,7 +75,7 @@ class ChargeTypes extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
         if ($id <= 0) {
             api_not_found();
             return;

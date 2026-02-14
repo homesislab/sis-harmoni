@@ -45,7 +45,7 @@ class HouseClaims extends MY_Controller
             return;
         }
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.requests.unit_claims.review')) {
             $filters = [];
             if ($source) $filters['source'] = $source;
             if ($status) $filters['status'] = $status;
@@ -132,13 +132,17 @@ class HouseClaims extends MY_Controller
             'source' => $source, // ✅
         ]);
 
-        audit_log($this, 'house_claim_create', 'Create house claim #' . $id);
+        $claim = $this->HouseClaimModel->find_by_id($id);
+        $houseCode = trim((string)($claim['house_code'] ?? ''));
+        if ($houseCode === '') $houseCode = 'Unit';
+        $ct = ($claim_type === 'owner') ? 'Pemilik' : 'Penghuni';
+        audit_log($this, 'Mengajukan klaim unit', 'Mengajukan klaim ' . $ct . ' untuk "' . $houseCode . '"');
         api_ok($this->HouseClaimModel->find_by_id($id), null, 201);
     }
 
     public function approve(int $id = 0): void
     {
-        $this->require_any_permission(['units.manage']);
+        $this->require_any_permission(['app.services.requests.unit_claims.review']);
         if ($id <= 0) { api_not_found(); return; }
 
         $claim = $this->HouseClaimModel->find_by_id($id);
@@ -230,13 +234,17 @@ class HouseClaims extends MY_Controller
 
         $this->HouseClaimModel->review($id, 'approved', (int)$this->auth_user['id'], 'Approved');
 
-        audit_log($this, 'house_claim_approve', 'Approve house claim #' . $id);
+        $houseCode = trim((string)($claim['house_code'] ?? ''));
+        if ($houseCode === '') $houseCode = 'Unit';
+        $personName = trim((string)($claim['person_name'] ?? ''));
+        if ($personName === '') $personName = 'warga';
+        audit_log($this, 'Menyetujui klaim unit', 'Menyetujui klaim unit "' . $houseCode . '" untuk ' . $personName);
         api_ok($this->HouseClaimModel->find_by_id($id));
     }
 
     public function reject(int $id = 0): void
     {
-        $this->require_any_permission(['units.manage']);
+        $this->require_any_permission(['app.services.requests.unit_claims.review']);
         if ($id <= 0) { api_not_found(); return; }
 
         $claim = $this->HouseClaimModel->find_by_id($id);
@@ -248,7 +256,11 @@ class HouseClaims extends MY_Controller
 
         $this->HouseClaimModel->review($id, 'rejected', (int)$this->auth_user['id'], null, $reject_note);
 
-        audit_log($this, 'house_claim_reject', 'Reject house claim #' . $id);
+        $houseCode = trim((string)($claim['house_code'] ?? ''));
+        if ($houseCode === '') $houseCode = 'Unit';
+        $personName = trim((string)($claim['person_name'] ?? ''));
+        if ($personName === '') $personName = 'warga';
+        audit_log($this, 'Menolak klaim unit', 'Menolak klaim unit "' . $houseCode . '" untuk ' . $personName);
         api_ok($this->HouseClaimModel->find_by_id($id));
     }
 }

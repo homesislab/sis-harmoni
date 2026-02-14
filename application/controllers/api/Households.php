@@ -19,7 +19,7 @@ class Households extends MY_Controller
         $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
         $q    = trim((string)$this->input->get('q'));
 
-        if (in_array('admin', $this->auth_roles, true)) {
+        if ($this->has_permission('app.services.master.households.manage')) {
             $res = $this->HouseholdModel->paginate($page, $per, $q);
         } else {
             if (empty($this->auth_user['person_id'])) {
@@ -34,7 +34,7 @@ class Households extends MY_Controller
 
     public function store(): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.households.manage');
 
         $in = $this->json_input();
         $kk_number = trim((string)($in['kk_number'] ?? ''));
@@ -70,7 +70,7 @@ class Households extends MY_Controller
         $row = $this->HouseholdModel->find_detail($id);
         if (!$row) { api_not_found(); return; }
 
-        if (!in_array('admin', $this->auth_roles, true)) {
+        if (!$this->has_permission('app.services.master.households.manage')) {
             if (empty($this->auth_user['person_id'])) {
                 api_error('FORBIDDEN', 'Akun tidak terhubung ke data warga', 403);
                 return;
@@ -87,7 +87,7 @@ class Households extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.master.households.manage');
         if ($id <= 0) { api_not_found(); return; }
 
         $row = $this->HouseholdModel->find_by_id($id);

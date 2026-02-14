@@ -13,7 +13,7 @@ class MeetingActionItems extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->ActionItemModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }
@@ -25,7 +25,7 @@ class MeetingActionItems extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_role(['admin']);
+        $this->require_permission('app.services.notes.meeting_minutes.manage');
         if ($id <= 0) { api_not_found(); return; }
         $row = $this->ActionItemModel->find_by_id($id);
         if (!$row) { api_not_found(); return; }

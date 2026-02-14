@@ -13,14 +13,13 @@ class Rbac
      * Return:
      * [
      *   'roles' => ['resident','admin',...],
-     *   'permissions' => ['billing.read','payment.verify',...]
+     *   'permissions' => ['app.services.finance.invoices.manage','payment.verify',...]
      * ]
      */
     public function load_for_user(int $user_id): array
     {
         $CI =& get_instance();
 
-        // Roles
         $roles = $CI->db
             ->select('r.code')
             ->from('user_roles ur')
@@ -30,7 +29,6 @@ class Rbac
 
         $role_codes = array_values(array_unique(array_map(fn($x) => $x['code'], $roles)));
 
-        // Permissions from role_permissions
         $perms_role = $CI->db
             ->select('p.code')
             ->from('user_roles ur')
@@ -41,7 +39,6 @@ class Rbac
 
         $perm_codes = array_map(fn($x) => $x['code'], $perms_role);
 
-        // Direct grants from user_permissions (grant-only)
         $perms_user = $CI->db
             ->select('p.code')
             ->from('user_permissions up')

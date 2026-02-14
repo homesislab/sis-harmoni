@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * SIS Harmoni API Response Helper
+ * SIS Paguyuban API Response Helper
  * Standard:
  *  - Success: { ok:true, data:..., meta? }
  *  - Error  : { ok:false, error:{ code, message, fields? } }
@@ -129,4 +129,3 @@ if (!function_exists('api_pagination_meta')) {
         ];
     }
 }
-

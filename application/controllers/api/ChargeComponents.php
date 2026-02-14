@@ -25,7 +25,7 @@ class ChargeComponents extends MY_Controller
 
     public function store(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
 
         $in = $this->json_input();
         $err = $this->ChargeModel->validate_component($in, true);
@@ -45,7 +45,7 @@ class ChargeComponents extends MY_Controller
 
     public function update(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -70,7 +70,7 @@ class ChargeComponents extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
         if ($id <= 0) {
             api_not_found();
             return;
@@ -88,7 +88,7 @@ class ChargeComponents extends MY_Controller
 
     public function reorder(): void
     {
-        $this->require_any_permission(['billing.manage']);
+        $this->require_any_permission(['app.services.finance.charge_types.manage']);
 
         $in = $this->json_input();
         $charge_type_id = (int)($in['charge_type_id'] ?? 0);

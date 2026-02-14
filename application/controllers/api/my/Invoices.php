@@ -27,7 +27,9 @@ class Invoices extends MY_Controller
         $filters = [
             'status' => $this->input->get('status') ? (string)$this->input->get('status') : null,
             'period' => $this->input->get('period') ? (string)$this->input->get('period') : null,
+            'period_like' => $this->input->get('period_like') ? (string)$this->input->get('period_like') : null,
             'charge_type_id' => $this->input->get('charge_type_id') ? (int)$this->input->get('charge_type_id') : null,
+            'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
         $res = $this->InvoiceModel->paginate_for_household($hh_id, $page, $per, $filters);
@@ -52,10 +54,31 @@ class Invoices extends MY_Controller
             return;
         }
 
+        $agg = $this->db->select("
+                SUM(CASE WHEN p.status='pending' THEN 1 ELSE 0 END) as pending_payment_count,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.status ORDER BY p.id DESC), ',', 1) as last_payment_status,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.note ORDER BY p.id DESC SEPARATOR '||'), '||', 1) as last_payment_note,
+                SUBSTRING_INDEX(GROUP_CONCAT(p.paid_at ORDER BY p.id DESC), ',', 1) as last_payment_paid_at
+            ", false)
+            ->from('payment_invoice_intents pii')
+            ->join('payments p', 'p.id=pii.payment_id', 'left')
+            ->where('pii.invoice_id', (int)$id)
+            ->get()->row_array();
+
+        $inv['pending_payment_count'] = (int)($agg['pending_payment_count'] ?? 0);
+        $inv['last_payment_status'] = $agg['last_payment_status'] ?? null;
+        $inv['last_payment_note'] = $agg['last_payment_note'] ?? null;
+        $inv['last_payment_paid_at'] = $agg['last_payment_paid_at'] ?? null;
+
         $lines = $this->InvoiceModel->list_lines($id);
+
         $allocs = $this->PaymentModel->list_invoice_allocations_for_invoice($id);
 
-        api_ok(['invoice' => $inv, 'lines' => $lines, 'payment_allocations' => $allocs]);
+        api_ok([
+            'invoice' => $inv,
+            'lines' => $lines,
+            'payment_allocations' => $allocs
+        ]);
     }
 
     public function ensure(): void

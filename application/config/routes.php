@@ -34,6 +34,13 @@ $route['api/v1/auth/me']['PUT']       = 'api/Auth/update_me';
 $route['api/v1/auth/logout']['POST']  = 'api/Auth/logout';
 
 /* =========================================================
+ * Profile
+ * ======================================================= */
+$route['api/v1/profile/family-accounts']['GET']                = 'api/ProfileFamilyAccounts/index';
+$route['api/v1/profile/family-accounts']['POST']               = 'api/ProfileFamilyAccounts/store';
+$route['api/v1/profile/family-accounts/(:num)']['PUT']         = 'api/ProfileFamilyAccounts/update/$1';
+
+/* =========================================================
  * Users / Roles / Permissions
  * ======================================================= */
 $route['api/v1/users']['GET']                 = 'api/Users/index';
@@ -247,6 +254,7 @@ $route['api/v1/businesses/(:num)']['GET']                       = 'api/Businesse
 $route['api/v1/businesses/(:num)']['PUT']                       = 'api/Businesses/update/$1';
 $route['api/v1/businesses/(:num)/approve']['POST']              = 'api/Businesses/approve/$1';
 $route['api/v1/businesses/(:num)/reject']['POST']               = 'api/Businesses/reject/$1';
+$route['api/v1/businesses/(:num)/resubmit']['POST']             = 'api/Businesses/resubmit/$1';
 $route['api/v1/businesses/(:num)/products']['GET']              = 'api/Businesses/products/$1';
 
 $route['api/v1/products']['GET']                                = 'api/Products/index';
@@ -299,5 +307,9 @@ $route['api/v1/uploads/image']['POST']                           = 'api/Uploads/
 $route['api/v1/dashboard/summary']['GET']                        = 'api/Dashboard/summary';
 $route['api/v1/dashboard/finance']['GET']                        = 'api/Dashboard/finance';
 $route['api/v1/dashboard/activity']['GET']                       = 'api/Dashboard/activity';
+$route['api/v1/dashboard/report']['GET']                         = 'api/Dashboard/report';
+
+// Org Units (for dashboard filter)
+$route['api/v1/org-units']['GET']                               = 'api/OrgUnits/index';
 
 $route['api/v1/audit-logs']['GET']                               = 'api/AuditLogs/index';
