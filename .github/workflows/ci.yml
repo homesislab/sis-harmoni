@@ -2,14 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
 
 jobs:
   build-and-test:
     runs-on: self-hosted
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -27,8 +26,7 @@ jobs:
 
       - name: PHP Lint (CodeIgniter)
         run: |
-          docker compose exec -T app sh -lc \
-            'find application -name "*.php" -print0 | xargs -0 -n1 php -l'
+          docker compose exec -T app sh -lc 'find application -name "*.php" -print0 | xargs -0 -n1 php -l'
 
       - name: Smoke test HTTP
         run: |
@@ -44,7 +42,6 @@ jobs:
         if: always()
         run: docker compose down --remove-orphans
 
-
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -53,7 +50,7 @@ jobs:
     steps:
       - name: Install cloudflared
         run: |
-          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+          curl -L "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb" -o cloudflared.deb
           sudo dpkg -i cloudflared.deb
 
       - name: Deploy to server via SSH (Cloudflare)
@@ -66,35 +63,28 @@ jobs:
           set -e
 
           mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          printf "%s" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          cat >> ~/.ssh/config <<EOF
-Host ssh.homesislab.my.id
-  User $SSH_USER
-  StrictHostKeyChecking no
-  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET
-EOF
+          # write ssh config safely (no YAML/heredoc ambiguity)
+          {
+            echo "Host ssh.homesislab.my.id"
+            echo "  User $SSH_USER"
+            echo "  StrictHostKeyChecking no"
+            echo "  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET"
+          } >> ~/.ssh/config
 
-          ssh ssh.homesislab.my.id << 'EOF'
+          # deploy
+          ssh ssh.homesislab.my.id "bash -lc '
             set -e
-
             cd /home/gie/workspace/sis-harmoni
-
-            echo "== Pull latest code =="
             git fetch origin main
             git reset --hard origin/main
 
-            echo "== Docker deploy (clean) =="
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
 
-            echo "== Running containers =="
             docker compose ps
-
-            echo "== App logs =="
             docker compose logs --tail=150 app || true
-
-            echo "== Cleanup images =="
             docker image prune -f
-          EOF
+          '"
