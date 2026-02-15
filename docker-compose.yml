@@ -1,21 +1,17 @@
-version: "3.8"
-
 services:
-  app:
+  api:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: sis_harmoni_app
-    ports:
-      - "8083:80"
-    volumes:
-      - .:/var/www/html
-    environment:
-      - CI_ENV=testing
+    container_name: sis_paguyuban_api
     env_file:
       - .env
+    environment:
+      - CI_ENV=production
+    ports:
+      - "8083:80"
     networks:
       - shared_apps
+    restart: unless-stopped
 
 networks:
   shared_apps:
