@@ -2,32 +2,32 @@ name: CI
 
 on:
   push:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
   pull_request:
-    branches: [ "master", "main" ]
+    branches: ["master", "main"]
 
 jobs:
   build-and-test:
     runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Build Docker images
-      run: docker compose build
+      - name: Build Docker images
+        run: docker compose build
 
-    - name: Start services
-      run: docker compose up -d
+      - name: Start services
+        run: docker compose up -d
 
-    - name: Wait for database
-      run: |
-        echo "Waiting for database..."
-        sleep 10
+      - name: Wait for database
+        run: |
+          echo "Waiting for database..."
+          sleep 10
 
-    - name: Run PHP Lint
-      run: docker compose run --rm app find application -name "*.php" -print0 | xargs -0 -n1 php -l
+      - name: Run PHP Lint
+        run: docker compose run --rm app find application -name "*.php" -print0 | xargs -0 -n1 php -l
 
-    - name: Stop services
-      run: docker compose down
+      - name: Stop services
+        run: docker compose down
 
   deploy:
     needs: build-and-test
@@ -50,7 +50,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
+
           # 2. Configure SSH to use Cloudflared
           echo "Host ssh.homesislab.my.id" >> ~/.ssh/config
           echo "  StrictHostKeyChecking no" >> ~/.ssh/config

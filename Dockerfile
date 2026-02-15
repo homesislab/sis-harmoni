@@ -1,27 +1,26 @@
 FROM php:8.1-apache
 
+# Install dependencies
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    zip \
-    unzip \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
     libicu-dev \
-    libxml2-dev \
+    zip \
+    unzip \
     && docker-php-ext-install pdo_mysql mysqli mbstring exif pcntl bcmath gd intl
 
+# Enable mod_rewrite for CodeIgniter
 RUN a2enmod rewrite
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
+# Set working directory
 WORKDIR /var/www/html
 
-COPY . .
+# Copy application source
+COPY . /var/www/html
 
-RUN composer install --no-dev --optimize-autoloader
-
+# Fix permissions
 RUN chown -R www-data:www-data /var/www/html
 
+# Expose port
 EXPOSE 80
