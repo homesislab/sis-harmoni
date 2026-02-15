@@ -46,7 +46,6 @@ jobs:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-
     steps:
       - name: Install cloudflared
         run: |
@@ -63,10 +62,12 @@ jobs:
           set -e
 
           mkdir -p ~/.ssh
-          printf "%s" "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          printf "%s\n" "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # write ssh config safely (no YAML/heredoc ambiguity)
+          # fail fast if key invalid
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
           {
             echo "Host ssh.homesislab.my.id"
             echo "  User $SSH_USER"
@@ -74,7 +75,6 @@ jobs:
             echo "  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET"
           } >> ~/.ssh/config
 
-          # deploy
           ssh ssh.homesislab.my.id "bash -lc '
             set -e
             cd /home/gie/workspace/sis-harmoni
