@@ -1,14 +1,17 @@
+version: "3.8"
+
 services:
-  api:
+  app:
     build:
       context: .
-    container_name: sis_paguyuban_api
-    env_file:
-      - .env
-    environment:
-      - CI_ENV=production
+      dockerfile: Dockerfile
+    container_name: sis_harmoni_app
     ports:
       - "8083:80"
+    environment:
+      - CI_ENV=production
+    env_file:
+      - .env
     networks:
       - shared_apps
     restart: unless-stopped

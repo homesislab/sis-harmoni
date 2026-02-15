@@ -2,67 +2,99 @@ name: CI
 
 on:
   push:
-    branches: ["master", "main"]
+    branches: [ "master", "main" ]
   pull_request:
-    branches: ["master", "main"]
+    branches: [ "master", "main" ]
 
 jobs:
   build-and-test:
     runs-on: self-hosted
-    steps:
-      - uses: actions/checkout@v3
 
-      - name: Build Docker images
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build Docker image
         run: docker compose build
 
-      - name: Start services
-        run: docker compose up -d
-
-      - name: Wait for database
+      - name: Start container (clean)
         run: |
-          echo "Waiting for database..."
-          sleep 10
+          docker compose down --remove-orphans || true
+          docker compose up -d --build --remove-orphans
 
-      - name: Run PHP Lint
-        run: docker compose run --rm app find application -name "*.php" -print0 | xargs -0 -n1 php -l
+      - name: Wait for container
+        run: sleep 5
 
-      - name: Stop services
-        run: docker compose down
+      - name: PHP Lint (CodeIgniter)
+        run: |
+          docker compose exec -T app sh -lc \
+            'find application -name "*.php" -print0 | xargs -0 -n1 php -l'
+
+      - name: Smoke test HTTP
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8083/ || echo "000")
+          echo "HTTP STATUS: $code"
+          test "$code" -lt 500
+
+      - name: Print container logs (always)
+        if: always()
+        run: docker compose logs --no-color --tail=200 app
+
+      - name: Stop container
+        if: always()
+        run: docker compose down --remove-orphans
+
 
   deploy:
     needs: build-and-test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+
     steps:
-      - name: Install Cloudflared
+      - name: Install cloudflared
         run: |
-          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
           sudo dpkg -i cloudflared.deb
 
-      - name: Deploy to Server (Native SSH)
+      - name: Deploy to server via SSH (Cloudflare)
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
           SSH_USER: ${{ secrets.SSH_USER }}
           CF_ID: ${{ secrets.CF_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_CLIENT_SECRET }}
         run: |
-          # 1. Prepare .ssh and private key
+          set -e
+
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # 2. Configure SSH to use Cloudflared
-          echo "Host ssh.homesislab.my.id" >> ~/.ssh/config
-          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-          echo "  User $SSH_USER" >> ~/.ssh/config
-          echo "  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET" >> ~/.ssh/config
+          cat >> ~/.ssh/config <<EOF
+Host ssh.homesislab.my.id
+  User $SSH_USER
+  StrictHostKeyChecking no
+  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET
+EOF
 
-          # 3. Execute Deployment Script
           ssh ssh.homesislab.my.id << 'EOF'
-            # Adjusted path to current project: sis-harmoni
+            set -e
+
             cd /home/gie/workspace/sis-harmoni
+
+            echo "== Pull latest code =="
             git fetch origin main
             git reset --hard origin/main
-            docker compose up -d --build
+
+            echo "== Docker deploy (clean) =="
+            docker compose down --remove-orphans || true
+            docker compose up -d --build --remove-orphans
+
+            echo "== Running containers =="
+            docker compose ps
+
+            echo "== App logs =="
+            docker compose logs --tail=150 app || true
+
+            echo "== Cleanup images =="
             docker image prune -f
           EOF

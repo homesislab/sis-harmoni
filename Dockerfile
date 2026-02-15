@@ -1,20 +1,18 @@
 FROM php:8.1-apache
 
 RUN apt-get update && apt-get install -y \
-    git unzip zip libpng-dev libicu-dev \
-  && docker-php-ext-install mysqli pdo_mysql intl gd \
+    git zip unzip \
+    libpng-dev libonig-dev libxml2-dev libicu-dev \
+  && docker-php-ext-install pdo_mysql mysqli mbstring exif pcntl bcmath gd intl \
   && rm -rf /var/lib/apt/lists/*
 
 RUN a2enmod rewrite headers
-
-# Allow .htaccess (CI3 routing)
 RUN sed -i 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
 
 WORKDIR /var/www/html
-
 COPY . /var/www/html
 
-# Composer (dotenv lives in vendor)
+# Composer + install deps (dotenv)
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
