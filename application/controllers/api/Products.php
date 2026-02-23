@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Products extends MY_Controller
 {
@@ -14,8 +15,9 @@ class Products extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 40));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'business_id' => $this->input->get('business_id') ? (int)$this->input->get('business_id') : null,
@@ -30,12 +32,22 @@ class Products extends MY_Controller
     {
         $in = $this->json_input();
         $err = [];
-        if (empty($in['business_id'])) $err['business_id'] = 'Wajib diisi';
-        if (empty($in['name'])) $err['name'] = 'Wajib diisi';
-        if ($err) { api_validation_error($err); return; }
+        if (empty($in['business_id'])) {
+            $err['business_id'] = 'Wajib diisi';
+        }
+        if (empty($in['name'])) {
+            $err['name'] = 'Wajib diisi';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $biz = $this->BusinessModel->find_by_id((int)$in['business_id']);
-        if (!$biz) { api_validation_error(['business_id' => 'Business tidak ditemukan']); return; }
+        if (!$biz) {
+            api_validation_error(['business_id' => 'Business tidak ditemukan']);
+            return;
+        }
 
         $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -53,22 +65,37 @@ class Products extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->ProductModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         api_ok($row);
     }
 
     public function update(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ProductModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $biz = $this->BusinessModel->find_by_id((int)$row['business_id']);
-        if (!$biz) { api_not_found(); return; }
+        if (!$biz) {
+            api_not_found();
+            return;
+        }
 
         $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -84,12 +111,21 @@ class Products extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ProductModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $biz = $this->BusinessModel->find_by_id((int)$row['business_id']);
-        if (!$biz) { api_not_found(); return; }
+        if (!$biz) {
+            api_not_found();
+            return;
+        }
 
         $can_manage = $this->has_permission('app.services.notes.inventories.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);

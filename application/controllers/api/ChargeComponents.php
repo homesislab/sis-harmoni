@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class ChargeComponents extends MY_Controller
 {
@@ -103,7 +104,7 @@ class ChargeComponents extends MY_Controller
             return;
         }
 
-        $ids = array_values(array_filter(array_map('intval', $ordered_ids), fn($x) => $x > 0));
+        $ids = array_values(array_filter(array_map('intval', $ordered_ids), fn ($x) => $x > 0));
         if (count($ids) === 0) {
             api_validation_error(['ordered_ids' => 'Tidak valid']);
             return;

@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class FundraiserUpdates extends MY_Controller
 {
@@ -46,11 +47,39 @@ class FundraiserUpdates extends MY_Controller
             return;
         }
 
-        $id = $this->UpdateModel->create($in);
+        // Ambil user id login dari MY_Controller (sesuaikan dengan implementasimu)
+        // Pilih salah satu yang memang ada di project kamu:
+        $createdBy = 0;
+
+        // opsi 1 (paling umum kalau MY_Controller simpan user):
+        if (property_exists($this, 'user') && is_array($this->user) && isset($this->user['id'])) {
+            $createdBy = (int)$this->user['id'];
+        }
+
+        // opsi 2 (kalau ada auth user):
+        if ($createdBy <= 0 && property_exists($this, 'auth_user') && is_array($this->auth_user) && isset($this->auth_user['id'])) {
+            $createdBy = (int)$this->auth_user['id'];
+        }
+
+        // opsi 3 (kalau ada helper method di MY_Controller):
+        // if ($createdBy <= 0 && method_exists($this, 'auth_user_id')) $createdBy = (int)$this->auth_user_id();
+
+        if ($createdBy <= 0) {
+            api_validation_error(['auth' => 'User login tidak valid']);
+            return;
+        }
+
+        $id = $this->UpdateModel->create($in, $createdBy);
+
         $updTitle = trim((string)($in['title'] ?? ''));
-        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        if ($updTitle === '') {
+            $updTitle = 'Tanpa judul';
+        }
         $fundTitle = trim((string)($fund['title'] ?? ''));
-        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        if ($fundTitle === '') {
+            $fundTitle = 'Program donasi';
+        }
+
         audit_log($this, 'Menambahkan update donasi', 'Menambahkan update "' . $updTitle . '" untuk "' . $fundTitle . '"');
         api_ok($this->UpdateModel->find_by_id($id), null, 201);
     }
@@ -78,7 +107,9 @@ class FundraiserUpdates extends MY_Controller
 
         $this->UpdateModel->update($id, $in);
         $updTitle = trim((string)($row['title'] ?? ''));
-        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        if ($updTitle === '') {
+            $updTitle = 'Tanpa judul';
+        }
         audit_log($this, 'Memperbarui update donasi', 'Memperbarui update donasi "' . $updTitle . '"');
 
         api_ok($this->UpdateModel->find_by_id($id));
@@ -100,7 +131,9 @@ class FundraiserUpdates extends MY_Controller
 
         $this->UpdateModel->delete($id);
         $updTitle = trim((string)($row['title'] ?? ''));
-        if ($updTitle === '') $updTitle = 'Tanpa judul';
+        if ($updTitle === '') {
+            $updTitle = 'Tanpa judul';
+        }
         audit_log($this, 'Menghapus update donasi', 'Menghapus update donasi "' . $updTitle . '"');
         api_ok(['ok' => true]);
     }

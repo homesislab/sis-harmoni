@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class HouseClaims extends MY_Controller
 {
@@ -9,17 +10,18 @@ class HouseClaims extends MY_Controller
         $this->as_api();
         $this->require_auth();
 
-        $this->load->model('House_claim_model','HouseClaimModel');
-        $this->load->model('Ownership_model','OwnershipModel');
-        $this->load->model('Occupancy_model','OccupancyModel');
-        $this->load->model('House_model','HouseModel');
-        $this->load->model('User_model','UserModel');
+        $this->load->model('House_claim_model', 'HouseClaimModel');
+        $this->load->model('Ownership_model', 'OwnershipModel');
+        $this->load->model('Occupancy_model', 'OccupancyModel');
+        $this->load->model('House_model', 'HouseModel');
+        $this->load->model('User_model', 'UserModel');
     }
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $source = trim((string)$this->input->get('source'));
         $status = trim((string)$this->input->get('status'));
@@ -47,12 +49,24 @@ class HouseClaims extends MY_Controller
 
         if ($this->has_permission('app.services.requests.unit_claims.review')) {
             $filters = [];
-            if ($source) $filters['source'] = $source;
-            if ($status) $filters['status'] = $status;
-            if ($q !== '') $filters['q'] = $q;
-            if ($claim_type) $filters['claim_type'] = $claim_type;
-            if ($house_id > 0) $filters['house_id'] = $house_id;
-            if ($person_id > 0) $filters['person_id'] = $person_id;
+            if ($source) {
+                $filters['source'] = $source;
+            }
+            if ($status) {
+                $filters['status'] = $status;
+            }
+            if ($q !== '') {
+                $filters['q'] = $q;
+            }
+            if ($claim_type) {
+                $filters['claim_type'] = $claim_type;
+            }
+            if ($house_id > 0) {
+                $filters['house_id'] = $house_id;
+            }
+            if ($person_id > 0) {
+                $filters['person_id'] = $person_id;
+            }
 
             $res = $this->HouseClaimModel->paginate($page, $per, $filters);
             api_ok(['items' => $res['items']], $res['meta']);
@@ -66,10 +80,18 @@ class HouseClaims extends MY_Controller
         }
 
         $filters = ['person_id' => $pid];
-        if ($source) $filters['source'] = $source;
-        if ($status) $filters['status'] = $status;
-        if ($q !== '') $filters['q'] = $q;
-        if ($claim_type) $filters['claim_type'] = $claim_type;
+        if ($source) {
+            $filters['source'] = $source;
+        }
+        if ($status) {
+            $filters['status'] = $status;
+        }
+        if ($q !== '') {
+            $filters['q'] = $q;
+        }
+        if ($claim_type) {
+            $filters['claim_type'] = $claim_type;
+        }
 
         $res = $this->HouseClaimModel->paginate($page, $per, $filters);
         api_ok(['items' => $res['items']], $res['meta']);
@@ -88,14 +110,18 @@ class HouseClaims extends MY_Controller
         $source = 'additional';
 
         $fields = [];
-        if ($house_id <= 0) $fields['house_id'] = 'house_id wajib.';
-        if (!in_array($claim_type, ['owner','tenant'], true)) $fields['claim_type'] = 'claim_type harus owner|tenant.';
+        if ($house_id <= 0) {
+            $fields['house_id'] = 'house_id wajib.';
+        }
+        if (!in_array($claim_type, ['owner','tenant'], true)) {
+            $fields['claim_type'] = 'claim_type harus owner|tenant.';
+        }
         if ($unit_type !== null && $unit_type !== '' && !in_array($unit_type, ['house','kavling'], true)) {
             $fields['unit_type'] = 'unit_type harus house|kavling.';
         }
 
         if (!$this->auth_user || empty($this->auth_user['person_id'])) {
-            api_error('FORBIDDEN','Akun belum terhubung ke person.',403);
+            api_error('FORBIDDEN', 'Akun belum terhubung ke person.', 403);
             return;
         }
         $person_id = (int)$this->auth_user['person_id'];
@@ -104,19 +130,22 @@ class HouseClaims extends MY_Controller
             $fields['is_primary'] = 'Penghuni kontrak harus memilih tempat tinggal utama.';
         }
 
-        if ($fields) { api_validation_error($fields); return; }
+        if ($fields) {
+            api_validation_error($fields);
+            return;
+        }
 
         if ($this->HouseClaimModel->has_open_claim($house_id, $person_id)) {
             api_conflict('Masih ada klaim unit yang pending untuk unit ini.');
             return;
         }
 
-        $hasOcc = (int)$this->db->from('house_occupancies')->where('house_id',$house_id)->where('status','active')->count_all_results();
+        $hasOcc = (int)$this->db->from('house_occupancies')->where('house_id', $house_id)->where('status', 'active')->count_all_results();
         if ($hasOcc > 0) {
             api_conflict('Unit sudah ditempati / tidak tersedia.');
             return;
         }
-        $hasPending = (int)$this->db->from('house_claims')->where('house_id',$house_id)->where('status','pending')->count_all_results();
+        $hasPending = (int)$this->db->from('house_claims')->where('house_id', $house_id)->where('status', 'pending')->count_all_results();
         if ($hasPending > 0) {
             api_conflict('Unit sedang dalam proses klaim (menunggu persetujuan).');
             return;
@@ -134,7 +163,9 @@ class HouseClaims extends MY_Controller
 
         $claim = $this->HouseClaimModel->find_by_id($id);
         $houseCode = trim((string)($claim['house_code'] ?? ''));
-        if ($houseCode === '') $houseCode = 'Unit';
+        if ($houseCode === '') {
+            $houseCode = 'Unit';
+        }
         $ct = ($claim_type === 'owner') ? 'Pemilik' : 'Penghuni';
         audit_log($this, 'Mengajukan klaim unit', 'Mengajukan klaim ' . $ct . ' untuk "' . $houseCode . '"');
         api_ok($this->HouseClaimModel->find_by_id($id), null, 201);
@@ -143,11 +174,20 @@ class HouseClaims extends MY_Controller
     public function approve(int $id = 0): void
     {
         $this->require_any_permission(['app.services.requests.unit_claims.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $claim = $this->HouseClaimModel->find_by_id($id);
-        if (!$claim) { api_not_found(); return; }
-        if (($claim['status'] ?? '') !== 'pending') { api_conflict('Klaim tidak dalam status pending.'); return; }
+        if (!$claim) {
+            api_not_found();
+            return;
+        }
+        if (($claim['status'] ?? '') !== 'pending') {
+            api_conflict('Klaim tidak dalam status pending.');
+            return;
+        }
 
         $house_id = (int)$claim['house_id'];
         $person_id = (int)$claim['person_id'];
@@ -210,7 +250,7 @@ class HouseClaims extends MY_Controller
                     'end_date' => date('Y-m-d'),
                 ]);
 
-            $hasOcc = (int)$this->db->from('house_occupancies')->where('house_id',$house_id)->where('status','active')->count_all_results();
+            $hasOcc = (int)$this->db->from('house_occupancies')->where('house_id', $house_id)->where('status', 'active')->count_all_results();
             if ($hasOcc > 0) {
                 api_conflict('Unit sudah ditempati.');
                 return;
@@ -235,9 +275,13 @@ class HouseClaims extends MY_Controller
         $this->HouseClaimModel->review($id, 'approved', (int)$this->auth_user['id'], 'Approved');
 
         $houseCode = trim((string)($claim['house_code'] ?? ''));
-        if ($houseCode === '') $houseCode = 'Unit';
+        if ($houseCode === '') {
+            $houseCode = 'Unit';
+        }
         $personName = trim((string)($claim['person_name'] ?? ''));
-        if ($personName === '') $personName = 'warga';
+        if ($personName === '') {
+            $personName = 'warga';
+        }
         audit_log($this, 'Menyetujui klaim unit', 'Menyetujui klaim unit "' . $houseCode . '" untuk ' . $personName);
         api_ok($this->HouseClaimModel->find_by_id($id));
     }
@@ -245,11 +289,20 @@ class HouseClaims extends MY_Controller
     public function reject(int $id = 0): void
     {
         $this->require_any_permission(['app.services.requests.unit_claims.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $claim = $this->HouseClaimModel->find_by_id($id);
-        if (!$claim) { api_not_found(); return; }
-        if (($claim['status'] ?? '') !== 'pending') { api_conflict('Klaim tidak dalam status pending.'); return; }
+        if (!$claim) {
+            api_not_found();
+            return;
+        }
+        if (($claim['status'] ?? '') !== 'pending') {
+            api_conflict('Klaim tidak dalam status pending.');
+            return;
+        }
 
         $in = $this->json_input();
         $reject_note = isset($in['reject_note']) ? (string)$in['reject_note'] : null;
@@ -257,9 +310,13 @@ class HouseClaims extends MY_Controller
         $this->HouseClaimModel->review($id, 'rejected', (int)$this->auth_user['id'], null, $reject_note);
 
         $houseCode = trim((string)($claim['house_code'] ?? ''));
-        if ($houseCode === '') $houseCode = 'Unit';
+        if ($houseCode === '') {
+            $houseCode = 'Unit';
+        }
         $personName = trim((string)($claim['person_name'] ?? ''));
-        if ($personName === '') $personName = 'warga';
+        if ($personName === '') {
+            $personName = 'warga';
+        }
         audit_log($this, 'Menolak klaim unit', 'Menolak klaim unit "' . $houseCode . '" untuk ' . $personName);
         api_ok($this->HouseClaimModel->find_by_id($id));
     }

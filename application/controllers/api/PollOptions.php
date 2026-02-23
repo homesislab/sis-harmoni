@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class PollOptions extends MY_Controller
 {
@@ -80,7 +81,9 @@ class PollOptions extends MY_Controller
 
         $this->PollModel->update_option($id, $label);
         $old = trim((string)($opt['label'] ?? ''));
-        if ($old === '') $old = 'Opsi';
+        if ($old === '') {
+            $old = 'Opsi';
+        }
         audit_log($this, 'Memperbarui opsi polling', 'Memperbarui opsi polling "' . ($poll['title'] ?? 'Tanpa judul') . '": "' . $old . '" → "' . $label . '"');
 
         api_ok(['ok' => true]);
@@ -112,7 +115,9 @@ class PollOptions extends MY_Controller
 
         $this->PollModel->delete_option($id);
         $old = trim((string)($opt['label'] ?? ''));
-        if ($old === '') $old = 'Opsi';
+        if ($old === '') {
+            $old = 'Opsi';
+        }
         audit_log($this, 'Menghapus opsi polling', 'Menghapus opsi "' . $old . '" dari polling "' . ($poll['title'] ?? 'Tanpa judul') . '"');
 
         api_ok(['ok' => true]);

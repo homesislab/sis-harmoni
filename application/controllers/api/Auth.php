@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Auth extends MY_Controller
 {
@@ -103,11 +104,18 @@ class Auth extends MY_Controller
                 $err['password'] = 'Minimal 6 karakter';
             }
         }
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $upd = [];
-        if ($email !== null) $upd['email'] = $email;
-        if ($password !== null) $upd['password_hash'] = password_hash($password, PASSWORD_BCRYPT);
+        if ($email !== null) {
+            $upd['email'] = $email;
+        }
+        if ($password !== null) {
+            $upd['password_hash'] = password_hash($password, PASSWORD_BCRYPT);
+        }
 
         $this->UserModel->update_self((int)$this->auth_user['id'], $upd);
 

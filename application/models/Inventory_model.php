@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Inventory_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Inventory_model extends MY_Model
 {
+    protected string $table_name = 'inventories';
+
     private string $table = 'inventories';
 
     public function find_by_id(int $id): ?array
@@ -39,7 +42,9 @@ class Inventory_model extends CI_Model
         $allowed = ['code','name','category','location_text','condition','qty','unit','acquired_at','purchase_price','notes','status'];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k, $data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
         if ($upd) {
             $upd['updated_at'] = date('Y-m-d H:i:s');
@@ -57,9 +62,15 @@ class Inventory_model extends CI_Model
         $offset = ($page - 1) * $per;
         $qb = $this->db->from($this->table);
 
-        if (!empty($filters['status'])) $qb->where('status', (string)$filters['status']);
-        if (!empty($filters['category'])) $qb->where('category', (string)$filters['category']);
-        if (!empty($filters['condition'])) $qb->where('condition', (string)$filters['condition']);
+        if (!empty($filters['status'])) {
+            $qb->where('status', (string)$filters['status']);
+        }
+        if (!empty($filters['category'])) {
+            $qb->where('category', (string)$filters['category']);
+        }
+        if (!empty($filters['condition'])) {
+            $qb->where('condition', (string)$filters['condition']);
+        }
         if (!empty($filters['q'])) {
             $q = (string)$filters['q'];
             $qb->group_start()

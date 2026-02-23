@@ -1,26 +1,35 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Poll_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Poll_model extends MY_Model
 {
+    protected string $table_name = 'polls';
+
     public function validate_poll(array $in, bool $is_create): array
     {
         $err = [];
 
         if ($is_create) {
             foreach (['title','start_at','end_at'] as $f) {
-                if (!isset($in[$f]) || trim((string)$in[$f]) === '') $err[$f] = 'Wajib diisi';
+                if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
+                    $err[$f] = 'Wajib diisi';
+                }
             }
         }
 
         if (isset($in['vote_scope'])) {
             $vs = trim((string)$in['vote_scope']);
-            if (!in_array($vs, ['user','household'], true)) $err['vote_scope'] = 'Nilai tidak valid';
+            if (!in_array($vs, ['user','household'], true)) {
+                $err['vote_scope'] = 'Nilai tidak valid';
+            }
         }
 
         if (isset($in['status'])) {
             $st = trim((string)$in['status']);
-            if (!in_array($st, ['draft','published','closed'], true)) $err['status'] = 'Nilai tidak valid';
+            if (!in_array($st, ['draft','published','closed'], true)) {
+                $err['status'] = 'Nilai tidak valid';
+            }
         }
 
         foreach (['start_at','end_at'] as $k) {
@@ -44,16 +53,18 @@ class Poll_model extends CI_Model
 
     public function find_poll(int $id): ?array
     {
-        $row = $this->db->get_where('polls', ['id'=>$id])->row_array();
+        $row = $this->db->get_where('polls', ['id' => $id])->row_array();
         return $row ?: null;
     }
 
     public function find_detail(int $id): ?array
     {
         $poll = $this->find_poll($id);
-        if (!$poll) return null;
+        if (!$poll) {
+            return null;
+        }
 
-        $options = $this->db->from('poll_options')->where('poll_id',$id)->order_by('id','ASC')->get()->result_array();
+        $options = $this->db->from('poll_options')->where('poll_id', $id)->order_by('id', 'ASC')->get()->result_array();
 
         return [
             'poll' => $poll,
@@ -68,8 +79,12 @@ class Poll_model extends CI_Model
         $qb = $this->db->from('polls p')
             ->join('users u', 'u.id = p.created_by', 'left');
 
-        if (!empty($filters['status'])) $qb->where('p.status', (string)$filters['status']);
-        if (!empty($filters['status_in']) && is_array($filters['status_in'])) $qb->where_in('p.status', $filters['status_in']);
+        if (!empty($filters['status'])) {
+            $qb->where('p.status', (string)$filters['status']);
+        }
+        if (!empty($filters['status_in']) && is_array($filters['status_in'])) {
+            $qb->where_in('p.status', $filters['status_in']);
+        }
 
         if (!empty($filters['q'])) {
             $q = (string)$filters['q'];
@@ -82,13 +97,13 @@ class Poll_model extends CI_Model
         $total = (int)$qb->count_all_results('', false);
 
         $items = $qb->select('p.id,p.title,p.start_at,p.end_at,p.status,p.vote_scope,p.created_at,u.username AS created_by_username')
-            ->order_by('p.created_at','DESC')
+            ->order_by('p.created_at', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page,'per_page'=>$per,'total'=>$total],
+            'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),
@@ -114,24 +129,28 @@ class Poll_model extends CI_Model
         $allowed = ['title','description','start_at','end_at','vote_scope'];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k, $in)) $upd[$k] = is_string($in[$k]) ? trim((string)$in[$k]) : $in[$k];
+            if (array_key_exists($k, $in)) {
+                $upd[$k] = is_string($in[$k]) ? trim((string)$in[$k]) : $in[$k];
+            }
         }
-        if ($upd) $this->db->where('id',$id)->update('polls', $upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update('polls', $upd);
+        }
     }
 
     public function delete_poll(int $id): void
     {
-        $this->db->where('id',$id)->delete('polls');
+        $this->db->where('id', $id)->delete('polls');
     }
 
     public function set_status(int $id, string $status): void
     {
-        $this->db->where('id',$id)->update('polls', ['status'=>$status]);
+        $this->db->where('id', $id)->update('polls', ['status' => $status]);
     }
 
     public function count_options(int $poll_id): int
     {
-        return (int)$this->db->from('poll_options')->where('poll_id',$poll_id)->count_all_results();
+        return (int)$this->db->from('poll_options')->where('poll_id', $poll_id)->count_all_results();
     }
 
     public function create_option(int $poll_id, string $label): int
@@ -145,18 +164,18 @@ class Poll_model extends CI_Model
 
     public function find_option(int $id): ?array
     {
-        $row = $this->db->get_where('poll_options', ['id'=>$id])->row_array();
+        $row = $this->db->get_where('poll_options', ['id' => $id])->row_array();
         return $row ?: null;
     }
 
     public function update_option(int $id, string $label): void
     {
-        $this->db->where('id',$id)->update('poll_options', ['label'=>$label]);
+        $this->db->where('id', $id)->update('poll_options', ['label' => $label]);
     }
 
     public function delete_option(int $id): void
     {
-        $this->db->where('id',$id)->delete('poll_options');
+        $this->db->where('id', $id)->delete('poll_options');
     }
 
     public function resolve_household_id_for_person(int $person_id): ?int
@@ -164,7 +183,7 @@ class Poll_model extends CI_Model
         $row = $this->db->select('household_id')
             ->from('household_members')
             ->where('person_id', $person_id)
-            ->order_by('id','ASC')
+            ->order_by('id', 'ASC')
             ->get()->row_array();
 
         return $row ? (int)$row['household_id'] : null;
@@ -173,7 +192,7 @@ class Poll_model extends CI_Model
     public function get_results(int $poll_id): array
     {
         $poll = $this->find_poll($poll_id);
-        $options = $this->db->from('poll_options')->where('poll_id',$poll_id)->order_by('id','ASC')->get()->result_array();
+        $options = $this->db->from('poll_options')->where('poll_id', $poll_id)->order_by('id', 'ASC')->get()->result_array();
 
         $rows = $this->db->select('option_id, COUNT(*) AS total')
             ->from('poll_votes')
@@ -182,7 +201,9 @@ class Poll_model extends CI_Model
             ->get()->result_array();
 
         $map = [];
-        foreach ($rows as $r) $map[(int)$r['option_id']] = (int)$r['total'];
+        foreach ($rows as $r) {
+            $map[(int)$r['option_id']] = (int)$r['total'];
+        }
 
         $total_votes = array_sum($map);
 

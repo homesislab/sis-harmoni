@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Emergency_report_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Emergency_report_model extends MY_Model
 {
+    protected string $table_name = 'emergency_reports';
+
     private string $table = 'emergency_reports';
 
     private function qb_with_joins()
@@ -44,7 +47,9 @@ class Emergency_report_model extends CI_Model
     private function apply_search(?string $q): void
     {
         $q = is_string($q) ? trim($q) : '';
-        if ($q === '') return;
+        if ($q === '') {
+            return;
+        }
 
         $this->db->group_start()
             ->like('er.description', $q)
@@ -92,7 +97,9 @@ class Emergency_report_model extends CI_Model
         ];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k, $data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
         if ($upd) {
             $upd['updated_at'] = date('Y-m-d H:i:s');
@@ -106,11 +113,19 @@ class Emergency_report_model extends CI_Model
 
         $qb = $this->qb_with_joins();
 
-        if (!empty($filters['status'])) $qb->where('er.status', (string)$filters['status']);
-        if (!empty($filters['type'])) $qb->where('er.type', (string)$filters['type']);
-        if (!empty($filters['reporter_person_id'])) $qb->where('er.reporter_person_id', (int)$filters['reporter_person_id']);
+        if (!empty($filters['status'])) {
+            $qb->where('er.status', (string)$filters['status']);
+        }
+        if (!empty($filters['type'])) {
+            $qb->where('er.type', (string)$filters['type']);
+        }
+        if (!empty($filters['reporter_person_id'])) {
+            $qb->where('er.reporter_person_id', (int)$filters['reporter_person_id']);
+        }
 
-        if (!empty($filters['q'])) $this->apply_search((string)$filters['q']);
+        if (!empty($filters['q'])) {
+            $this->apply_search((string)$filters['q']);
+        }
 
         $count_qb = clone $qb;
         $count_qb->select('COUNT(1) AS cnt', false);

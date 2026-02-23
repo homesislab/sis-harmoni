@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Household_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Household_model extends MY_Model
 {
+    protected string $table_name = 'households';
+
     public function find_by_id(int $id): ?array
     {
         $row = $this->db->get_where('households', ['id' => $id])->row_array();
@@ -27,9 +30,15 @@ class Household_model extends CI_Model
     public function update(int $id, array $data): void
     {
         $upd = [];
-        if (isset($data['kk_number'])) $upd['kk_number'] = $data['kk_number'];
-        if (isset($data['head_person_id'])) $upd['head_person_id'] = (int)$data['head_person_id'];
-        if ($upd) $this->db->where('id', $id)->update('households', $upd);
+        if (isset($data['kk_number'])) {
+            $upd['kk_number'] = $data['kk_number'];
+        }
+        if (isset($data['head_person_id'])) {
+            $upd['head_person_id'] = (int)$data['head_person_id'];
+        }
+        if ($upd) {
+            $this->db->where('id', $id)->update('households', $upd);
+        }
     }
 
     public function add_member(int $household_id, int $person_id, string $relationship): bool
@@ -39,7 +48,9 @@ class Household_model extends CI_Model
             'person_id' => $person_id,
         ])->row_array();
 
-        if ($exists) return false;
+        if ($exists) {
+            return false;
+        }
 
         $this->db->insert('household_members', [
             'household_id' => $household_id,
@@ -52,7 +63,9 @@ class Household_model extends CI_Model
     public function update_member_relationship(int $household_member_id, string $relationship): ?array
     {
         $row = $this->db->get_where('household_members', ['id' => $household_member_id])->row_array();
-        if (!$row) return null;
+        if (!$row) {
+            return null;
+        }
 
         $this->db->where('id', $household_member_id)->update('household_members', [
             'relationship' => $relationship,
@@ -70,7 +83,9 @@ class Household_model extends CI_Model
     public function remove_member(int $household_member_id): bool
     {
         $row = $this->db->get_where('household_members', ['id' => $household_member_id])->row_array();
-        if (!$row) return false;
+        if (!$row) {
+            return false;
+        }
         $this->db->where('id', $household_member_id)->delete('household_members');
         return true;
     }
@@ -87,7 +102,9 @@ class Household_model extends CI_Model
     public function find_detail(int $id): ?array
     {
         $hh = $this->find_by_id($id);
-        if (!$hh) return null;
+        if (!$hh) {
+            return null;
+        }
 
         $head = $this->db->get_where('persons', ['id' => (int)$hh['head_person_id']])->row_array();
 
@@ -105,7 +122,7 @@ class Household_model extends CI_Model
         ];
     }
 
-    public function paginate(int $page, int $per, string $q=''): array
+    public function paginate(int $page, int $per, string $q = ''): array
     {
         $offset = ($page - 1) * $per;
 
@@ -127,14 +144,14 @@ class Household_model extends CI_Model
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page,'per_page'=>$per,'total'=>$total],
+            'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),
         ];
     }
 
-    public function paginate_for_person(int $person_id, int $page, int $per, string $q=''): array
+    public function paginate_for_person(int $person_id, int $page, int $per, string $q = ''): array
     {
         $offset = ($page - 1) * $per;
 
@@ -156,7 +173,7 @@ class Household_model extends CI_Model
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page,'per_page'=>$per,'total'=>$total],
+            'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),

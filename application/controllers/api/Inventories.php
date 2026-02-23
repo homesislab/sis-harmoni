@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Inventories extends MY_Controller
 {
@@ -28,18 +29,27 @@ class Inventories extends MY_Controller
         ];
 
         $res = $this->InventoryModel->paginate($page, $per, $filters);
-        api_ok(['items'=>$res['items']], $res['meta']);
+        api_ok(['items' => $res['items']], $res['meta']);
     }
 
     public function store(): void
     {
         $this->require_permission('app.services.notes.inventories.manage');
         $in = $this->json_input();
-        if (!isset($in['location_text']) && isset($in['location'])) $in['location_text'] = $in['location'];
+        if (!isset($in['location_text']) && isset($in['location'])) {
+            $in['location_text'] = $in['location'];
+        }
         $err = [];
-        if (empty($in['code'])) $err['code'] = 'Wajib diisi';
-        if (empty($in['name'])) $err['name'] = 'Wajib diisi';
-        if ($err) { api_validation_error($err); return; }
+        if (empty($in['code'])) {
+            $err['code'] = 'Wajib diisi';
+        }
+        if (empty($in['name'])) {
+            $err['name'] = 'Wajib diisi';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $payload = $in;
         $payload['created_by'] = (int)$this->auth_user['id'];
@@ -57,9 +67,15 @@ class Inventories extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->InventoryModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.notes.inventories.manage') && ($row['status'] ?? '') !== 'active') {
             api_not_found();
@@ -67,19 +83,29 @@ class Inventories extends MY_Controller
         }
 
         $logs = $this->InventoryLogModel->list_by_inventory($id, 50);
-        api_ok(['inventory'=>$row, 'logs'=>$logs]);
+        api_ok(['inventory' => $row, 'logs' => $logs]);
     }
 
     public function update(int $id = 0): void
     {
         $this->require_permission('app.services.notes.inventories.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->InventoryModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
-        if (!isset($in['location_text']) && isset($in['location'])) $in['location_text'] = $in['location'];
-        if (!isset($in['location_text']) && isset($in['location'])) $in['location_text'] = $in['location'];
+        if (!isset($in['location_text']) && isset($in['location'])) {
+            $in['location_text'] = $in['location'];
+        }
+        if (!isset($in['location_text']) && isset($in['location'])) {
+            $in['location_text'] = $in['location'];
+        }
 
         $from_loc = $row['location_text'] ?? null;
         $to_loc = array_key_exists('location_text', $in) ? ($in['location_text'] ?? null) : $from_loc;
@@ -108,9 +134,15 @@ class Inventories extends MY_Controller
     public function archive(int $id = 0): void
     {
         $this->require_permission('app.services.notes.inventories.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->InventoryModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->InventoryModel->update($id, ['status' => 'archived']);
         $this->InventoryLogModel->create([
@@ -125,9 +157,15 @@ class Inventories extends MY_Controller
     public function checkout(int $id = 0): void
     {
         $this->require_permission('app.services.notes.inventories.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->InventoryModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $this->InventoryLogModel->create([
@@ -138,15 +176,21 @@ class Inventories extends MY_Controller
             'note' => $in['note'] ?? null,
             'actor_user_id' => (int)$this->auth_user['id'],
         ]);
-        api_ok(['ok'=>true]);
+        api_ok(['ok' => true]);
     }
 
     public function return_item(int $id = 0): void
     {
         $this->require_permission('app.services.notes.inventories.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->InventoryModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $this->InventoryLogModel->create([
@@ -166,6 +210,6 @@ class Inventories extends MY_Controller
             ]);
         }
 
-        api_ok(['ok'=>true]);
+        api_ok(['ok' => true]);
     }
 }

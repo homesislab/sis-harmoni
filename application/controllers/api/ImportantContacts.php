@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class ImportantContacts extends MY_Controller
 {
@@ -13,8 +14,9 @@ class ImportantContacts extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $can_manage = $this->has_permission('app.services.info.contacts.manage');
 
@@ -33,8 +35,13 @@ class ImportantContacts extends MY_Controller
         $this->require_permission('app.services.info.contacts.manage');
         $in = $this->json_input();
         $err = [];
-        if (empty($in['name'])) $err['name'] = 'Wajib diisi';
-        if ($err) { api_validation_error($err); return; }
+        if (empty($in['name'])) {
+            $err['name'] = 'Wajib diisi';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $payload = $in;
         $payload['created_by'] = (int)$this->auth_user['id'];
@@ -45,9 +52,15 @@ class ImportantContacts extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ContactModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.info.contacts.manage') && (int)($row['is_public'] ?? 1) !== 1) {
             api_not_found();
@@ -60,9 +73,15 @@ class ImportantContacts extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_permission('app.services.info.contacts.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ContactModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $this->ContactModel->update($id, $in);
@@ -73,9 +92,15 @@ class ImportantContacts extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_permission('app.services.info.contacts.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ContactModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->ContactModel->delete($id);
         api_ok(['ok' => true]);

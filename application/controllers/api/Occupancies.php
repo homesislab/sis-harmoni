@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Occupancies extends MY_Controller
 {
@@ -16,14 +17,18 @@ class Occupancies extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         if ($this->has_permission('app.services.master.houses.manage')) {
             $res = $this->OccupancyModel->paginate($page, $per);
         } else {
             $hhid = (int)($this->auth_household_id ?? 0);
-            if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
+            if ($hhid <= 0) {
+                api_error('FORBIDDEN', 'Akun belum terhubung ke household', 403);
+                return;
+            }
             $res = $this->OccupancyModel->paginate_for_household($hhid, $page, $per);
         }
 
@@ -43,14 +48,31 @@ class Occupancies extends MY_Controller
         $allowed = ['owner_live','owner_not_live','tenant','family','caretaker'];
 
         $err = [];
-        if ($house_id <= 0) $err['house_id'] = 'Wajib diisi';
-        if ($household_id <= 0) $err['household_id'] = 'Wajib diisi';
-        if (!in_array($occupancy_type, $allowed, true)) $err['occupancy_type'] = 'Nilai tidak valid';
-        if ($start_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) $err['start_date'] = 'Format YYYY-MM-DD';
-        if ($err) { api_validation_error($err); return; }
+        if ($house_id <= 0) {
+            $err['house_id'] = 'Wajib diisi';
+        }
+        if ($household_id <= 0) {
+            $err['household_id'] = 'Wajib diisi';
+        }
+        if (!in_array($occupancy_type, $allowed, true)) {
+            $err['occupancy_type'] = 'Nilai tidak valid';
+        }
+        if ($start_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) {
+            $err['start_date'] = 'Format YYYY-MM-DD';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
-        if (!$this->HouseModel->find_by_id($house_id)) { api_validation_error(['house_id' => 'House tidak ditemukan']); return; }
-        if (!$this->HouseholdModel->find_by_id($household_id)) { api_validation_error(['household_id' => 'Household tidak ditemukan']); return; }
+        if (!$this->HouseModel->find_by_id($house_id)) {
+            api_validation_error(['house_id' => 'House tidak ditemukan']);
+            return;
+        }
+        if (!$this->HouseholdModel->find_by_id($household_id)) {
+            api_validation_error(['household_id' => 'Household tidak ditemukan']);
+            return;
+        }
 
         $id = $this->OccupancyModel->create([
             'house_id' => $house_id,
@@ -73,7 +95,10 @@ class Occupancies extends MY_Controller
         }
 
         $row = $this->OccupancyModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $payload = [];

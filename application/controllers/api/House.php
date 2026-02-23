@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class House extends MY_Controller
 {
@@ -14,8 +15,9 @@ class House extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
         $q    = trim((string)$this->input->get('q'));
 
         $status = trim((string)$this->input->get('status'));        // occupied|vacant|owned|rented|plot|unknown
@@ -30,10 +32,19 @@ class House extends MY_Controller
                 return;
             }
             $hhid = (int)($this->auth_household_id ?? 0);
-            if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
+            if ($hhid <= 0) {
+                api_error('FORBIDDEN', 'Akun belum terhubung ke household', 403);
+                return;
+            }
 
             $res = $this->HouseModel->paginate_for_household_active_occupancy(
-                $hhid, $page, $per, $q, $status, $type, $status_group
+                $hhid,
+                $page,
+                $per,
+                $q,
+                $status,
+                $type,
+                $status_group
             );
         }
 
@@ -46,7 +57,10 @@ class House extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->HouseModel->validate_payload($in, true);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         if ($this->HouseModel->exists_code($in['code'])) {
             api_conflict('Kode rumah sudah terpakai');
@@ -63,17 +77,29 @@ class House extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->HouseModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.master.houses.manage')) {
             $hhid = (int)($this->auth_household_id ?? 0);
-            if ($hhid <= 0) { api_error('FORBIDDEN','Akun belum terhubung ke household',403); return; }
+            if ($hhid <= 0) {
+                api_error('FORBIDDEN', 'Akun belum terhubung ke household', 403);
+                return;
+            }
 
             if (method_exists($this->HouseModel, 'is_house_in_household_active_occupancy')) {
                 $ok = $this->HouseModel->is_house_in_household_active_occupancy($id, $hhid);
-                if (!$ok) { api_not_found(); return; }
+                if (!$ok) {
+                    api_not_found();
+                    return;
+                }
             }
         }
 
@@ -83,14 +109,23 @@ class House extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_permission('app.services.master.houses.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->HouseModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $err = $this->HouseModel->validate_payload($in, false);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         if (isset($in['code']) && $this->HouseModel->exists_code($in['code'], $id)) {
             api_conflict('Kode rumah sudah terpakai');

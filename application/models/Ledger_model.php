@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Ledger_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Ledger_model extends MY_Model
 {
+    protected string $table_name = 'ledger_accounts';
+
     public function find_account(int $id): ?array
     {
         $row = $this->db
@@ -19,11 +22,11 @@ class Ledger_model extends CI_Model
         $balance = (float)($acc['balance'] ?? 0);
 
         $tot = $this->db->select(
-                "SUM(CASE WHEN direction='in' THEN amount ELSE 0 END) AS total_in, " .
+            "SUM(CASE WHEN direction='in' THEN amount ELSE 0 END) AS total_in, " .
                 "SUM(CASE WHEN direction='out' THEN amount ELSE 0 END) AS total_out, " .
                 "MAX(occurred_at) AS last_entry_at",
-                false
-            )
+            false
+        )
             ->from('ledger_entries')
             ->where('ledger_account_id', $ledger_account_id)
             ->get()->row_array();
@@ -39,7 +42,9 @@ class Ledger_model extends CI_Model
     public function ensure_default_account(string $type): int
     {
         $row = $this->db->from('ledger_accounts')->where('type', $type)->order_by('id', 'ASC')->get()->row_array();
-        if ($row) return (int)$row['id'];
+        if ($row) {
+            return (int)$row['id'];
+        }
 
         $this->db->insert('ledger_accounts', [
             'name' => strtoupper($type) . ' - Main',
@@ -56,7 +61,9 @@ class Ledger_model extends CI_Model
         $qb = $this->db->from('ledger_accounts')
             ->where('deleted_at IS NULL', null, false);
 
-        if ($type !== null) $qb->where('type', $type);
+        if ($type !== null) {
+            $qb->where('type', $type);
+        }
 
         return $qb->order_by('id', 'ASC')->get()->result_array();
     }
@@ -113,10 +120,18 @@ class Ledger_model extends CI_Model
             ->from('ledger_entries e')
             ->join('ledger_accounts a', 'a.id = e.ledger_account_id', 'left');
 
-        if (!empty($filters['ledger_account_id'])) $qb->where('e.ledger_account_id', (int)$filters['ledger_account_id']);
-        if (!empty($filters['direction']) && in_array($filters['direction'], ['in','out'], true)) $qb->where('e.direction', $filters['direction']);
-        if (!empty($filters['from'])) $qb->where('e.occurred_at >=', $filters['from']);
-        if (!empty($filters['to'])) $qb->where('e.occurred_at <=', $filters['to']);
+        if (!empty($filters['ledger_account_id'])) {
+            $qb->where('e.ledger_account_id', (int)$filters['ledger_account_id']);
+        }
+        if (!empty($filters['direction']) && in_array($filters['direction'], ['in','out'], true)) {
+            $qb->where('e.direction', $filters['direction']);
+        }
+        if (!empty($filters['from'])) {
+            $qb->where('e.occurred_at >=', $filters['from']);
+        }
+        if (!empty($filters['to'])) {
+            $qb->where('e.occurred_at <=', $filters['to']);
+        }
 
         $countQ = clone $qb;
         $total = (int)$countQ->count_all_results('', false);

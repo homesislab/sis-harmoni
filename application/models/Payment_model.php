@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Payment_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Payment_model extends MY_Model
 {
+    protected string $table_name = 'payments';
+
     public function sum_allocated_for_invoice(int $invoice_id): float
     {
         $row = $this->db->select('COALESCE(SUM(allocated_amount),0) AS s', false)
@@ -14,7 +17,7 @@ class Payment_model extends CI_Model
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where('payments',['id'=>$id])->row_array();
+        $row = $this->db->get_where('payments', ['id' => $id])->row_array();
         return $row ?: null;
     }
 
@@ -39,14 +42,18 @@ class Payment_model extends CI_Model
     {
         foreach ($invoice_ids as $invId) {
             $invId = (int)$invId;
-            if ($invId <= 0) continue;
+            if ($invId <= 0) {
+                continue;
+            }
 
             $exists = $this->db->get_where('payment_invoice_intents', [
                 'payment_id' => $payment_id,
                 'invoice_id' => $invId,
             ])->row_array();
 
-            if ($exists) continue;
+            if ($exists) {
+                continue;
+            }
 
             $this->db->insert('payment_invoice_intents', [
                 'payment_id' => $payment_id,
@@ -61,7 +68,7 @@ class Payment_model extends CI_Model
     {
         return $this->db->from('payment_invoice_intents')
             ->where('payment_id', $payment_id)
-            ->order_by('id','ASC')
+            ->order_by('id', 'ASC')
             ->get()->result_array();
     }
 
@@ -69,17 +76,17 @@ class Payment_model extends CI_Model
     {
         return $this->db->select('pii.invoice_id, pii.intended_amount, i.period, i.total_amount, i.status as invoice_status, ct.name as charge_name, ct.category as charge_category')
             ->from('payment_invoice_intents pii')
-            ->join('invoices i','i.id=pii.invoice_id','left')
-            ->join('charge_types ct','ct.id=i.charge_type_id','left')
+            ->join('invoices i', 'i.id=pii.invoice_id', 'left')
+            ->join('charge_types ct', 'ct.id=i.charge_type_id', 'left')
             ->where('pii.payment_id', $payment_id)
-            ->order_by('i.period','DESC')
-            ->order_by('pii.id','ASC')
+            ->order_by('i.period', 'DESC')
+            ->order_by('pii.id', 'ASC')
             ->get()->result_array();
     }
 
     public function approve(int $payment_id, int $verified_by, array $allocInvoices, array $allocComponents): void
     {
-        $this->db->where('id',$payment_id)->update('payments', [
+        $this->db->where('id', $payment_id)->update('payments', [
             'status' => 'approved',
             'verified_by' => $verified_by,
             'verified_at' => date('Y-m-d H:i:s'),
@@ -108,7 +115,7 @@ class Payment_model extends CI_Model
 
     public function reject(int $id, int $verified_by, ?string $note = null): void
     {
-        $this->db->where('id',$id)->update('payments', [
+        $this->db->where('id', $id)->update('payments', [
             'status' => 'rejected',
             'verified_by' => $verified_by,
             'verified_at' => date('Y-m-d H:i:s'),
@@ -176,21 +183,21 @@ class Payment_model extends CI_Model
 
     public function list_invoice_allocations(int $payment_id): array
     {
-        return $this->db->get_where('payment_invoice_allocations', ['payment_id'=>$payment_id])->result_array();
+        return $this->db->get_where('payment_invoice_allocations', ['payment_id' => $payment_id])->result_array();
     }
 
     public function list_component_allocations(int $payment_id): array
     {
-        return $this->db->get_where('payment_component_allocations', ['payment_id'=>$payment_id])->result_array();
+        return $this->db->get_where('payment_component_allocations', ['payment_id' => $payment_id])->result_array();
     }
 
     public function list_invoice_allocations_for_invoice(int $invoice_id): array
     {
         return $this->db->select('pia.*, p.status as payment_status, p.paid_at, p.amount as payment_amount')
             ->from('payment_invoice_allocations pia')
-            ->join('payments p','p.id=pia.payment_id','left')
+            ->join('payments p', 'p.id=pia.payment_id', 'left')
             ->where('pia.invoice_id', $invoice_id)
-            ->order_by('p.id','DESC')
+            ->order_by('p.id', 'DESC')
             ->get()->result_array();
     }
 
@@ -205,11 +212,11 @@ class Payment_model extends CI_Model
             p.paid_at
         ", false)
         ->from('payment_invoice_allocations pia')
-        ->join('payments p','p.id=pia.payment_id','inner')
-        ->join('payment_component_allocations pca','pca.payment_id=p.id','inner')
-        ->join('charge_components cc','cc.id=pca.charge_component_id','left')
+        ->join('payments p', 'p.id=pia.payment_id', 'inner')
+        ->join('payment_component_allocations pca', 'pca.payment_id=p.id', 'inner')
+        ->join('charge_components cc', 'cc.id=pca.charge_component_id', 'left')
         ->where('pia.invoice_id', $invoice_id)
-        ->order_by('p.id','DESC')
+        ->order_by('p.id', 'DESC')
         ->order_by('pca.charge_component_id','ASC')
         ->get()->result_array();
     }

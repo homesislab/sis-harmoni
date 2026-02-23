@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Onboarding extends MY_Controller
 {
@@ -18,8 +19,9 @@ class Onboarding extends MY_Controller
 
     public function units(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(500, max(1, (int)$this->input->get('per_page') ?: 500));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $block = strtoupper(trim((string)($this->input->get('block') ?? '')));
         $q = trim((string)($this->input->get('q') ?? ''));
@@ -49,7 +51,7 @@ class Onboarding extends MY_Controller
             ->limit($per, $offset)
             ->get()->result_array();
 
-        $items = array_map(function($h) {
+        $items = array_map(function ($h) {
             return [
                 'id' => $h['id'],
                 'code' => $h['code'],
@@ -73,13 +75,15 @@ class Onboarding extends MY_Controller
             ->from('houses h')
             ->where("NOT EXISTS (SELECT 1 FROM house_occupancies ho WHERE ho.house_id=h.id AND ho.status='active')", null, false)
             ->where("NOT EXISTS (SELECT 1 FROM house_claims hc WHERE hc.house_id=h.id AND hc.status='pending')", null, false)
-            ->order_by('h.block','ASC')
+            ->order_by('h.block', 'ASC')
             ->get()->result_array();
 
         $blocks = [];
         foreach ($rows as $r) {
             $b = strtoupper(trim((string)($r['block'] ?? '')));
-            if ($b !== '') $blocks[] = $b;
+            if ($b !== '') {
+                $blocks[] = $b;
+            }
         }
         api_ok(['items' => $blocks]);
     }
@@ -114,7 +118,10 @@ class Onboarding extends MY_Controller
         }
 
         $errHead = $this->PersonModel->validate_payload($head, true);
-        if ($errHead) { api_validation_error($errHead, 'Data kepala keluarga belum lengkap'); return; }
+        if ($errHead) {
+            api_validation_error($errHead, 'Data kepala keluarga belum lengkap');
+            return;
+        }
 
         $username = trim((string)($account['username'] ?? ''));
         $password = (string)($account['password'] ?? '');
@@ -138,10 +145,15 @@ class Onboarding extends MY_Controller
         $has_tenant = false;
 
         foreach ($units as $u) {
-            if (!is_array($u)) continue;
+            if (!is_array($u)) {
+                continue;
+            }
 
             $houseId = (int)($u['house_id'] ?? 0);
-            if ($houseId <= 0) { api_validation_error(['units' => 'house_id tidak valid'], 'Unit belum valid'); return; }
+            if ($houseId <= 0) {
+                api_validation_error(['units' => 'house_id tidak valid'], 'Unit belum valid');
+                return;
+            }
 
             $ct = strtolower((string)($u['claim_type'] ?? 'owner'));
             if (!in_array($ct, $allowed_claim_types, true)) {
@@ -158,7 +170,9 @@ class Onboarding extends MY_Controller
 
             $isPrimary = (int)($u['is_primary'] ?? 0) === 1 ? 1 : 0;
 
-            if ($ct === 'tenant') $has_tenant = true;
+            if ($ct === 'tenant') {
+                $has_tenant = true;
+            }
 
             if ($isPrimary === 1) {
                 $primary_count++;
@@ -221,7 +235,9 @@ class Onboarding extends MY_Controller
 
             if (is_array($members)) {
                 foreach ($members as $m) {
-                    if (!is_array($m)) continue;
+                    if (!is_array($m)) {
+                        continue;
+                    }
                     $rel = trim((string)($m['relationship'] ?? 'anggota'));
                     $pdata = $m;
                     unset($pdata['relationship']);
@@ -252,8 +268,12 @@ class Onboarding extends MY_Controller
 
             if (is_array($vehicles)) {
                 foreach ($vehicles as $v) {
-                    if (!is_array($v)) continue;
-                    if (trim((string)($v['plate_number'] ?? '')) === '') continue;
+                    if (!is_array($v)) {
+                        continue;
+                    }
+                    if (trim((string)($v['plate_number'] ?? '')) === '') {
+                        continue;
+                    }
                     $v['person_id'] = $headPersonId;
                     $errV = $this->VehicleModel->validate_payload($v, true);
                     if ($errV) {
@@ -264,9 +284,13 @@ class Onboarding extends MY_Controller
             }
 
             foreach ($units as $u) {
-                if (!is_array($u)) continue;
+                if (!is_array($u)) {
+                    continue;
+                }
                 $houseId = (int)($u['house_id'] ?? 0);
-                if ($houseId <= 0) continue;
+                if ($houseId <= 0) {
+                    continue;
+                }
 
                 $claimType = strtolower((string)($u['claim_type'] ?? 'owner'));
                 $unitType = $u['unit_type'] ?? null;

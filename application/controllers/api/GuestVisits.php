@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class GuestVisits extends MY_Controller
 {
@@ -14,8 +15,9 @@ class GuestVisits extends MY_Controller
     public function index(): void
     {
         $this->require_permission('app.services.security.guest_book.manage');
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'q' => $this->_get_q(),
@@ -35,7 +37,9 @@ class GuestVisits extends MY_Controller
         $in = $this->json_input();
 
         $destination_type = strtolower(trim((string)($in['destination_type'] ?? 'unit')));
-        if (!in_array($destination_type, ['unit','non_unit'], true)) $destination_type = 'unit';
+        if (!in_array($destination_type, ['unit','non_unit'], true)) {
+            $destination_type = 'unit';
+        }
 
         $destination_label = isset($in['destination_label']) ? trim((string)$in['destination_label']) : null;
 
@@ -54,12 +58,16 @@ class GuestVisits extends MY_Controller
         $note          = isset($in['note']) ? trim((string)$in['note']) : null;
 
         $visit_at = trim((string)($in['visit_at'] ?? ''));
-        if ($visit_at === '') $visit_at = date('Y-m-d H:i:s');
+        if ($visit_at === '') {
+            $visit_at = date('Y-m-d H:i:s');
+        }
 
         $err = [];
 
         if ($destination_type === 'unit') {
-            if ($house_id === null) $err['house_id'] = 'Pilih unit tujuan.';
+            if ($house_id === null) {
+                $err['house_id'] = 'Pilih unit tujuan.';
+            }
             $destination_label = null; // ignore
         } else {
             $house_id = null;
@@ -68,14 +76,23 @@ class GuestVisits extends MY_Controller
             }
         }
 
-        if ($visitor_name === '') $err['visitor_name'] = 'Nama tamu wajib diisi.';
-        if ($purpose === '') $err['purpose'] = 'Keperluan wajib diisi.';
+        if ($visitor_name === '') {
+            $err['visitor_name'] = 'Nama tamu wajib diisi.';
+        }
+        if ($purpose === '') {
+            $err['purpose'] = 'Keperluan wajib diisi.';
+        }
         if (!preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $visit_at)) {
             $err['visit_at'] = 'Format YYYY-MM-DD HH:MM:SS';
         }
-        if ($visitor_count <= 0) $err['visitor_count'] = 'Minimal 1 orang.';
+        if ($visitor_count <= 0) {
+            $err['visitor_count'] = 'Minimal 1 orang.';
+        }
 
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $payload = [
             'house_id'           => $house_id,
@@ -103,9 +120,15 @@ class GuestVisits extends MY_Controller
     public function check_out(int $id = 0): void
     {
         $this->require_permission('app.services.security.guest_book.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->GuestVisitModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->GuestVisitModel->update($id, [
             'status' => 'checked_out',

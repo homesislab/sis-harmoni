@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class AuditLogs extends MY_Controller
 {
@@ -15,8 +16,9 @@ class AuditLogs extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(200, max(1, (int)$this->input->get('per_page') ?: 30));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'user_id' => $this->input->get('user_id') ? (int)$this->input->get('user_id') : null,
@@ -27,7 +29,10 @@ class AuditLogs extends MY_Controller
         ];
 
         $err = $this->validate_filters($filters);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $res = $this->AuditModel->paginate($page, $per, $filters);
         api_ok(['items' => $res['items']], $res['meta']);

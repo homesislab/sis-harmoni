@@ -1,28 +1,30 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Invoices extends MY_Controller
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class MyInvoices extends MY_Controller
 {
     public function __construct()
     {
         parent::__construct();
         $this->as_api();
         $this->require_auth();
-        $this->load->model('Invoice_model','InvoiceModel');
-        $this->load->model('Payment_model','PaymentModel');
-        $this->load->model('Charge_model','ChargeModel');
+        $this->load->model('Invoice_model', 'InvoiceModel');
+        $this->load->model('Payment_model', 'PaymentModel');
+        $this->load->model('Charge_model', 'ChargeModel');
     }
 
     public function index(): void
     {
         $hh_id = (int)($this->auth_household_id ?? 0);
         if ($hh_id <= 0) {
-            api_error('FORBIDDEN','Akun belum terhubung ke KK/household',403);
+            api_error('FORBIDDEN', 'Akun belum terhubung ke KK/household', 403);
             return;
         }
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'status' => $this->input->get('status') ? (string)$this->input->get('status') : null,
@@ -40,7 +42,7 @@ class Invoices extends MY_Controller
     {
         $hh_id = (int)($this->auth_household_id ?? 0);
         if ($hh_id <= 0) {
-            api_error('FORBIDDEN','Akun belum terhubung ke KK/household',403);
+            api_error('FORBIDDEN', 'Akun belum terhubung ke KK/household', 403);
             return;
         }
         if ($id <= 0) {
@@ -85,7 +87,7 @@ class Invoices extends MY_Controller
     {
         $hh_id = (int)($this->auth_household_id ?? 0);
         if ($hh_id <= 0) {
-            api_error('FORBIDDEN','Akun belum terhubung ke KK/household',403);
+            api_error('FORBIDDEN', 'Akun belum terhubung ke KK/household', 403);
             return;
         }
 
@@ -118,7 +120,7 @@ class Invoices extends MY_Controller
             ->where('is_active', 1)
             ->where('is_periodic', 1)
             ->where('period_unit', 'monthly')
-            ->order_by('id','ASC')
+            ->order_by('id', 'ASC')
             ->get()->result_array();
 
         $created = 0;
@@ -158,7 +160,7 @@ class Invoices extends MY_Controller
     {
         $hh_id = (int)($this->auth_household_id ?? 0);
         if ($hh_id <= 0) {
-            api_error('FORBIDDEN','Akun belum terhubung ke KK/household',403);
+            api_error('FORBIDDEN', 'Akun belum terhubung ke KK/household', 403);
             return;
         }
 

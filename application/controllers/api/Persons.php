@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Persons extends MY_Controller
 {
@@ -16,8 +17,9 @@ class Persons extends MY_Controller
     {
         $this->require_permission('app.services.master.residents.manage');
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
         $q    = trim((string)$this->input->get('q'));
 
         $res = $this->PersonModel->paginate($page, $per, $q);
@@ -32,7 +34,10 @@ class Persons extends MY_Controller
         $in = $this->json_input();
 
         $errors = $this->PersonModel->validate_payload($in, true);
-        if ($errors) { api_validation_error($errors); return; }
+        if ($errors) {
+            api_validation_error($errors);
+            return;
+        }
 
         if ($this->PersonModel->find_by_nik(trim((string)$in['nik']))) {
             api_conflict('NIK sudah terdaftar');
@@ -45,7 +50,10 @@ class Persons extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         if ($this->has_permission('app.services.master.residents.manage')) {
             $row = $this->PersonModel->find_by_id($id);
@@ -57,13 +65,19 @@ class Persons extends MY_Controller
             $row = $this->PersonModel->find_by_id($id);
         }
 
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
         api_ok($row);
     }
 
     public function update(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $is_admin = $this->has_permission('app.services.master.residents.manage');
         if (!$is_admin) {
@@ -74,12 +88,18 @@ class Persons extends MY_Controller
         }
 
         $row = $this->PersonModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
 
         $errors = $this->PersonModel->validate_payload($in, false);
-        if ($errors) { api_validation_error($errors); return; }
+        if ($errors) {
+            api_validation_error($errors);
+            return;
+        }
 
         if (isset($in['nik'])) {
             $nik = trim((string)$in['nik']);
@@ -98,9 +118,15 @@ class Persons extends MY_Controller
     {
         $this->require_permission('app.services.master.residents.manage');
 
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->PersonModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->PersonModel->soft_delete($id);
         api_ok(null, ['message' => 'Person dinonaktifkan (status=left)']);
@@ -109,10 +135,16 @@ class Persons extends MY_Controller
     public function me(): void
     {
         $person_id = (int)($this->auth_user['person_id'] ?? 0);
-        if ($person_id <= 0) { api_not_found(); return; }
+        if ($person_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PersonModel->find_by_id($person_id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         api_ok($row);
     }

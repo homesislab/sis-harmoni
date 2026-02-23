@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class FundraiserDonations extends MY_Controller
 {
@@ -17,8 +18,9 @@ class FundraiserDonations extends MY_Controller
     {
         $this->require_any_permission(['app.services.finance.donations.verify']);
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $status = trim((string)$this->input->get('status'));
         $q = trim((string)$this->input->get('q'));
@@ -85,9 +87,13 @@ class FundraiserDonations extends MY_Controller
             $this->db->trans_commit();
 
             $donor = ((int)($don['is_anonymous'] ?? 0) === 1) ? 'Anonim' : trim((string)($don['full_name'] ?? 'Warga'));
-            if ($donor === '') $donor = 'Warga';
+            if ($donor === '') {
+                $donor = 'Warga';
+            }
             $fundTitle = trim((string)($fund['title'] ?? ($don['fundraiser_title'] ?? '')));
-            if ($fundTitle === '') $fundTitle = 'Program donasi';
+            if ($fundTitle === '') {
+                $fundTitle = 'Program donasi';
+            }
             $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
             audit_log($this, 'Menyetujui donasi', 'Menyetujui donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 
@@ -123,9 +129,13 @@ class FundraiserDonations extends MY_Controller
         $this->DonationModel->reject($id, (int)$this->auth_user['id'], $note);
 
         $donor = ((int)($don['is_anonymous'] ?? 0) === 1) ? 'Anonim' : trim((string)($don['full_name'] ?? 'Warga'));
-        if ($donor === '') $donor = 'Warga';
+        if ($donor === '') {
+            $donor = 'Warga';
+        }
         $fundTitle = trim((string)($don['fundraiser_title'] ?? ''));
-        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        if ($fundTitle === '') {
+            $fundTitle = 'Program donasi';
+        }
         $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
         audit_log($this, 'Menolak donasi', 'Menolak donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 

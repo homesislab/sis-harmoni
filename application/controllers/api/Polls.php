@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Polls extends MY_Controller
 {
@@ -15,15 +16,19 @@ class Polls extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $can_manage = $this->has_permission('app.services.info.polls.manage');
 
         $filters = ['q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null];
 
-        if ($can_manage) $filters['status'] = $this->input->get('status') ? (string)$this->input->get('status') : null;
-        else $filters['status_in'] = ['published','closed'];
+        if ($can_manage) {
+            $filters['status'] = $this->input->get('status') ? (string)$this->input->get('status') : null;
+        } else {
+            $filters['status_in'] = ['published','closed'];
+        }
 
         $res = $this->PollModel->paginate($page, $per, $filters);
         api_ok(['items' => $res['items']], $res['meta']);
@@ -35,12 +40,17 @@ class Polls extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->PollModel->validate_poll($in, true);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->PollModel->create_poll($in, (int)$this->auth_user['id']);
 
         $title = trim((string)($in['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Membuat polling', 'Membuat polling "' . $title . '"');
 
         api_ok($this->PollModel->find_detail($id), null, 201);
@@ -48,10 +58,16 @@ class Polls extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PollModel->find_detail($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.info.polls.manage')) {
             if (!in_array($row['poll']['status'], ['published','closed'], true)) {
@@ -66,10 +82,16 @@ class Polls extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.polls.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PollModel->find_poll($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if ($row['status'] !== 'draft') {
             api_error('FORBIDDEN', 'Poll yang sudah dipublish tidak bisa diubah (kecuali close)', 403);
@@ -78,12 +100,17 @@ class Polls extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->PollModel->validate_poll($in, false);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $this->PollModel->update_poll($id, $in);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Memperbarui polling', 'Memperbarui polling "' . $title . '"');
 
         api_ok($this->PollModel->find_detail($id));
@@ -92,10 +119,16 @@ class Polls extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.polls.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PollModel->find_poll($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if ($row['status'] !== 'draft') {
             api_error('FORBIDDEN', 'Hanya poll draft yang boleh dihapus', 403);
@@ -105,7 +138,9 @@ class Polls extends MY_Controller
         $this->PollModel->delete_poll($id);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menghapus polling', 'Menghapus polling "' . $title . '"');
 
         api_ok(null, ['message' => 'Poll dihapus']);
@@ -114,12 +149,21 @@ class Polls extends MY_Controller
     public function publish(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.polls.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $poll = $this->PollModel->find_poll($id);
-        if (!$poll) { api_not_found(); return; }
+        if (!$poll) {
+            api_not_found();
+            return;
+        }
 
-        if ($poll['status'] !== 'draft') { api_conflict('Poll sudah dipublish/closed'); return; }
+        if ($poll['status'] !== 'draft') {
+            api_conflict('Poll sudah dipublish/closed');
+            return;
+        }
 
         $optCount = $this->PollModel->count_options($id);
         if ($optCount < 2) {
@@ -130,7 +174,9 @@ class Polls extends MY_Controller
         $this->PollModel->set_status($id, 'published');
 
         $title = trim((string)($poll['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Mempublish polling', 'Mempublish polling "' . $title . '"');
 
         api_ok(null, ['message' => 'Poll dipublish']);
@@ -139,17 +185,28 @@ class Polls extends MY_Controller
     public function close(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.polls.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $poll = $this->PollModel->find_poll($id);
-        if (!$poll) { api_not_found(); return; }
+        if (!$poll) {
+            api_not_found();
+            return;
+        }
 
-        if ($poll['status'] === 'closed') { api_conflict('Poll sudah closed'); return; }
+        if ($poll['status'] === 'closed') {
+            api_conflict('Poll sudah closed');
+            return;
+        }
 
         $this->PollModel->set_status($id, 'closed');
 
         $title = trim((string)($poll['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menutup polling', 'Menutup polling "' . $title . '"');
 
         api_ok(null, ['message' => 'Poll ditutup']);
@@ -158,7 +215,10 @@ class Polls extends MY_Controller
     public function vote(int $pollId = 0): void
     {
         $this->require_permission('app.home.polls');
-        if ($pollId <= 0) { api_not_found(); return; }
+        if ($pollId <= 0) {
+            api_not_found();
+            return;
+        }
 
         if (empty($this->auth_user['person_id'])) {
             api_error('FORBIDDEN', 'Akun belum terhubung ke data warga (person_id)', 403);
@@ -166,9 +226,15 @@ class Polls extends MY_Controller
         }
 
         $poll = $this->PollModel->find_poll($pollId);
-        if (!$poll) { api_not_found('Poll tidak ditemukan'); return; }
+        if (!$poll) {
+            api_not_found('Poll tidak ditemukan');
+            return;
+        }
 
-        if ($poll['status'] !== 'published') { api_error('FORBIDDEN','Poll belum dibuka / sudah ditutup',403); return; }
+        if ($poll['status'] !== 'published') {
+            api_error('FORBIDDEN', 'Poll belum dibuka / sudah ditutup', 403);
+            return;
+        }
 
         $now = date('Y-m-d H:i:s');
         if ($now < $poll['start_at'] || $now > $poll['end_at']) {
@@ -178,11 +244,14 @@ class Polls extends MY_Controller
 
         $in = $this->json_input();
         $option_id = (int)($in['option_id'] ?? 0);
-        if ($option_id <= 0) { api_validation_error(['option_id'=>'Wajib diisi']); return; }
+        if ($option_id <= 0) {
+            api_validation_error(['option_id' => 'Wajib diisi']);
+            return;
+        }
 
         $opt = $this->PollModel->find_option($option_id);
         if (!$opt || (int)$opt['poll_id'] !== $pollId) {
-            api_validation_error(['option_id'=>'Opsi tidak valid untuk poll ini']);
+            api_validation_error(['option_id' => 'Opsi tidak valid untuk poll ini']);
             return;
         }
 
@@ -212,9 +281,13 @@ class Polls extends MY_Controller
         }
 
         $pollTitle = trim((string)($poll['title'] ?? ''));
-        if ($pollTitle === '') $pollTitle = 'Polling';
+        if ($pollTitle === '') {
+            $pollTitle = 'Polling';
+        }
         $optLabel = trim((string)($opt['label'] ?? ''));
-        if ($optLabel === '') $optLabel = 'Opsi';
+        if ($optLabel === '') {
+            $optLabel = 'Opsi';
+        }
         audit_log($this, 'Mengisi polling', 'Mengisi polling "' . $pollTitle . '" memilih "' . $optLabel . '"');
 
         api_ok(['message' => 'Vote berhasil disimpan'], null, 201);
@@ -222,7 +295,10 @@ class Polls extends MY_Controller
 
     public function my_vote(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         if (empty($this->auth_user['person_id'])) {
             api_error('FORBIDDEN', 'Akun belum terhubung ke data warga (person_id)', 403);
@@ -230,7 +306,10 @@ class Polls extends MY_Controller
         }
 
         $poll = $this->PollModel->find_poll($id);
-        if (!$poll) { api_not_found('Poll tidak ditemukan'); return; }
+        if (!$poll) {
+            api_not_found('Poll tidak ditemukan');
+            return;
+        }
 
         if (!$this->has_permission('app.services.info.polls.manage')) {
             if (!in_array($poll['status'], ['published','closed'], true)) {
@@ -291,14 +370,20 @@ class Polls extends MY_Controller
 
     public function results(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $poll = $this->PollModel->find_poll($id);
-        if (!$poll) { api_not_found(); return; }
+        if (!$poll) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.info.polls.manage')) {
             if (!in_array($poll['status'], ['published','closed'], true)) {
-                api_error('FORBIDDEN','Akses ditolak',403);
+                api_error('FORBIDDEN', 'Akses ditolak', 403);
                 return;
             }
         }

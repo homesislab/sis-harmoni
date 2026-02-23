@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Person_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Person_model extends MY_Model
 {
+    protected string $table_name = 'persons';
+
     public function find_by_id(int $id): ?array
     {
         $row = $this->db->get_where('persons', ['id' => $id])->row_array();
@@ -22,18 +25,24 @@ class Person_model extends CI_Model
 
         if ($is_create) {
             foreach ($req as $f) {
-                if (!isset($in[$f]) || trim((string)$in[$f]) === '') $err[$f] = 'Wajib diisi';
+                if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
+                    $err[$f] = 'Wajib diisi';
+                }
             }
         }
 
         if (isset($in['gender'])) {
             $g = strtoupper(trim((string)$in['gender']));
-            if (!in_array($g, ['M','F'], true)) $err['gender'] = 'Harus M atau F';
+            if (!in_array($g, ['M','F'], true)) {
+                $err['gender'] = 'Harus M atau F';
+            }
         }
 
         if (isset($in['birth_date'])) {
             $d = trim((string)$in['birth_date']);
-            if ($d !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) $err['birth_date'] = 'Format YYYY-MM-DD';
+            if ($d !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) {
+                $err['birth_date'] = 'Format YYYY-MM-DD';
+            }
         }
 
         if (array_key_exists('blood_type', $in)) {
@@ -45,15 +54,19 @@ class Person_model extends CI_Model
 
         if (isset($in['marital_status'])) {
             $ms = trim((string)$in['marital_status']);
-            if (!in_array($ms, ['single','married','divorced','widowed'], true)) $err['marital_status'] = 'Nilai tidak valid';
+            if (!in_array($ms, ['single','married','divorced','widowed'], true)) {
+                $err['marital_status'] = 'Nilai tidak valid';
+            }
         }
 
         if (isset($in['status'])) {
             $st = trim((string)$in['status']);
-            if (!in_array($st, ['active','moved','left'], true)) $err['status'] = 'Nilai tidak valid';
+            if (!in_array($st, ['active','moved','left'], true)) {
+                $err['status'] = 'Nilai tidak valid';
+            }
         }
 
-        return array_filter($err, fn($v) => $v !== null);
+        return array_filter($err, fn ($v) => $v !== null);
     }
 
     public function create(array $data): int
@@ -85,10 +98,14 @@ class Person_model extends CI_Model
             if (array_key_exists($k, $data)) {
                 $v = $data[$k];
                 $upd[$k] = is_string($v) ? trim($v) : $v;
-                if ($k === 'gender') $upd[$k] = strtoupper(trim((string)$v));
+                if ($k === 'gender') {
+                    $upd[$k] = strtoupper(trim((string)$v));
+                }
             }
         }
-        if ($upd) $this->db->where('id', $id)->update('persons', $upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update('persons', $upd);
+        }
     }
 
     public function soft_delete(int $id): void

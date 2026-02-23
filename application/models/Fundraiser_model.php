@@ -1,35 +1,46 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Fundraiser_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Fundraiser_model extends MY_Model
 {
+    protected string $table_name = 'fundraisers';
+
     public function validate_payload(array $in, bool $is_create): array
     {
         $err = [];
         if ($is_create) {
             foreach (['title','category'] as $f) {
-                if (!isset($in[$f]) || trim((string)$in[$f]) === '') $err[$f] = 'Wajib diisi';
+                if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
+                    $err[$f] = 'Wajib diisi';
+                }
             }
         }
 
         if (isset($in['category'])) {
             $c = trim((string)$in['category']);
-            if (!in_array($c, ['paguyuban','dkm'], true)) $err['category'] = 'Nilai tidak valid';
+            if (!in_array($c, ['paguyuban','dkm'], true)) {
+                $err['category'] = 'Nilai tidak valid';
+            }
         }
 
         if (isset($in['status'])) {
             $s = trim((string)$in['status']);
-            if (!in_array($s, ['active','closed'], true)) $err['status'] = 'Nilai tidak valid';
+            if (!in_array($s, ['active','closed'], true)) {
+                $err['status'] = 'Nilai tidak valid';
+            }
         }
 
-        if (isset($in['target_amount']) && (float)$in['target_amount'] < 0) $err['target_amount'] = 'Tidak boleh negatif';
+        if (isset($in['target_amount']) && (float)$in['target_amount'] < 0) {
+            $err['target_amount'] = 'Tidak boleh negatif';
+        }
 
         return $err;
     }
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where('fundraisers', ['id'=>$id])->row_array();
+        $row = $this->db->get_where('fundraisers', ['id' => $id])->row_array();
         return $row ?: null;
     }
 
@@ -55,17 +66,19 @@ class Fundraiser_model extends CI_Model
                 $upd[$k] = is_string($in[$k]) ? trim((string)$in[$k]) : $in[$k];
             }
         }
-        if ($upd) $this->db->where('id',$id)->update('fundraisers', $upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update('fundraisers', $upd);
+        }
     }
 
     public function delete(int $id): void
     {
-        $this->db->where('id',$id)->delete('fundraisers');
+        $this->db->where('id', $id)->delete('fundraisers');
     }
 
     public function set_status(int $id, string $status): void
     {
-        $this->db->where('id',$id)->update('fundraisers', ['status'=>$status]);
+        $this->db->where('id', $id)->update('fundraisers', ['status' => $status]);
     }
 
     public function add_collected(int $id, float $amount): void
@@ -81,8 +94,12 @@ class Fundraiser_model extends CI_Model
 
         $qb = $this->db->from('fundraisers f');
 
-        if (!empty($filters['category'])) $qb->where('f.category', (string)$filters['category']);
-        if (!empty($filters['status'])) $qb->where('f.status', (string)$filters['status']);
+        if (!empty($filters['category'])) {
+            $qb->where('f.category', (string)$filters['category']);
+        }
+        if (!empty($filters['status'])) {
+            $qb->where('f.status', (string)$filters['status']);
+        }
 
         if (!empty($filters['q'])) {
             $q = (string)$filters['q'];
@@ -95,13 +112,13 @@ class Fundraiser_model extends CI_Model
         $total = (int)$qb->count_all_results('', false);
 
         $items = $qb->select('f.*')
-            ->order_by('f.created_at','DESC')
+            ->order_by('f.created_at', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page,'per_page'=>$per,'total'=>$total],
+            'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),

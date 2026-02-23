@@ -131,4 +131,29 @@ class MY_Controller extends CI_Controller
         api_permission_denied($first, 'Akses ditolak: permission yang sesuai diperlukan.');
         exit;
     }
+
+    /**
+     * Get validated pagination parameters
+     * Returns ['page' => int, 'per_page' => int, 'offset' => int]
+     */
+    protected function get_pagination_params(int $default_per_page = 20, int $max_per_page = 100): array
+    {
+        $page = max(1, (int)$this->input->get('page'));
+        $per_page = min($max_per_page, max(1, (int)$this->input->get('per_page') ?: $default_per_page));
+        $offset = ($page - 1) * $per_page;
+
+        return [
+            'page' => $page,
+            'per_page' => $per_page,
+            'offset' => $offset
+        ];
+    }
+
+    /**
+     * Get trimmed search query string
+     */
+    protected function get_search_query(string $param = 'q'): string
+    {
+        return trim((string)($this->input->get($param) ?? ''));
+    }
 }

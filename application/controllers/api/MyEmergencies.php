@@ -1,7 +1,8 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Emergencies extends MY_Controller
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class MyEmergencies extends MY_Controller
 {
     public function __construct()
     {
@@ -13,8 +14,9 @@ class Emergencies extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $pid = (int)($this->auth_user['person_id'] ?? 0);
 

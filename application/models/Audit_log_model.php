@@ -1,12 +1,19 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Audit_log_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Audit_log_model extends MY_Model
 {
+    protected string $table_name = 'audit_logs';
+
     private function extract_id(string $text): ?int
     {
-        if (preg_match('/\#(\d+)/', $text, $m)) return (int)$m[1];
-        if (preg_match('/\bID\s*(\d+)/i', $text, $m)) return (int)$m[1];
+        if (preg_match('/\#(\d+)/', $text, $m)) {
+            return (int)$m[1];
+        }
+        if (preg_match('/\bID\s*(\d+)/i', $text, $m)) {
+            return (int)$m[1];
+        }
         return null;
     }
 
@@ -78,11 +85,19 @@ class Audit_log_model extends CI_Model
         $qb = $this->db->from('audit_logs a')
             ->join('users u', 'u.id = a.user_id', 'left');
 
-        if (!empty($filters['user_id'])) $qb->where('a.user_id', (int)$filters['user_id']);
-        if (!empty($filters['action'])) $qb->where('a.action', (string)$filters['action']);
+        if (!empty($filters['user_id'])) {
+            $qb->where('a.user_id', (int)$filters['user_id']);
+        }
+        if (!empty($filters['action'])) {
+            $qb->where('a.action', (string)$filters['action']);
+        }
 
-        if (!empty($filters['from'])) $qb->where('a.created_at >=', (string)$filters['from']);
-        if (!empty($filters['to'])) $qb->where('a.created_at <=', (string)$filters['to']);
+        if (!empty($filters['from'])) {
+            $qb->where('a.created_at >=', (string)$filters['from']);
+        }
+        if (!empty($filters['to'])) {
+            $qb->where('a.created_at <=', (string)$filters['to']);
+        }
 
         if (!empty($filters['q'])) {
             $q = trim((string)$filters['q']);
@@ -107,7 +122,7 @@ class Audit_log_model extends CI_Model
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page, 'per_page'=>$per, 'total'=>$total],
+            'meta' => ['page' => $page, 'per_page' => $per, 'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),

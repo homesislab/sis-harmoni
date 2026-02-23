@@ -1,21 +1,32 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Fundraiser_update_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Fundraiser_update_model extends MY_Model
 {
+    protected string $table_name = 'fundraiser_updates';
+
     public function validate_payload(array $in, bool $is_create): array
     {
         $err = [];
+
         if ($is_create) {
-            foreach (['fundraiser_id','title','content'] as $f) {
-                if (!isset($in[$f]) || trim((string)$in[$f]) === '') $err[$f] = 'Wajib diisi';
+            foreach (['fundraiser_id', 'title'] as $f) {
+                if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
+                    $err[$f] = 'Wajib diisi';
+                }
             }
+            // content dibuat opsional (sesuai UI)
+            // kalau tetap mau minimal ada isi, uncomment:
+            // if (!isset($in['content'])) $in['content'] = '';
         }
+
         if (isset($in['attachments_json']) && $in['attachments_json'] !== null) {
             if (!is_array($in['attachments_json']) && !is_string($in['attachments_json'])) {
                 $err['attachments_json'] = 'Harus array atau string JSON';
             }
         }
+
         return $err;
     }
 
@@ -36,7 +47,7 @@ class Fundraiser_update_model extends CI_Model
             ->from('fundraiser_updates u')
             ->join('users us', 'us.id = u.created_by', 'left')
             ->where('u.fundraiser_id', $fundraiser_id)
-            ->order_by('u.created_at','DESC')
+            ->order_by('u.created_at', 'DESC')
             ->get()->result_array();
     }
 
@@ -49,13 +60,19 @@ class Fundraiser_update_model extends CI_Model
                 : (string)$in['attachments_json'];
         }
 
+        $content = '';
+        if (array_key_exists('content', $in) && $in['content'] !== null) {
+            $content = (string)$in['content'];
+        }
+
         $this->db->insert('fundraiser_updates', [
             'fundraiser_id' => (int)$in['fundraiser_id'],
             'title' => trim((string)$in['title']),
-            'content' => (string)$in['content'],
+            'content' => $content,
             'attachments_json' => $attachments,
             'created_by' => $created_by,
         ]);
+
         return (int)$this->db->insert_id();
     }
 
@@ -65,7 +82,9 @@ class Fundraiser_update_model extends CI_Model
         $upd = [];
 
         foreach ($allowed as $k) {
-            if (!array_key_exists($k, $in)) continue;
+            if (!array_key_exists($k, $in)) {
+                continue;
+            }
 
             if ($k === 'attachments_json') {
                 $upd[$k] = is_array($in[$k]) ? json_encode($in[$k]) : ($in[$k] === null ? null : (string)$in[$k]);
@@ -74,11 +93,13 @@ class Fundraiser_update_model extends CI_Model
             }
         }
 
-        if ($upd) $this->db->where('id',$id)->update('fundraiser_updates', $upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update('fundraiser_updates', $upd);
+        }
     }
 
     public function delete(int $id): void
     {
-        $this->db->where('id',$id)->delete('fundraiser_updates');
+        $this->db->where('id', $id)->delete('fundraiser_updates');
     }
 }

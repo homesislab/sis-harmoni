@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Events extends MY_Controller
 {
@@ -13,8 +14,9 @@ class Events extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'org'  => $this->input->get('org') ? (string)$this->input->get('org') : null,
@@ -24,7 +26,10 @@ class Events extends MY_Controller
         ];
 
         $err = $this->EventModel->validate_filters($filters);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $res = $this->EventModel->paginate($page, $per, $filters);
         api_ok(['items' => $res['items']], $res['meta']);
@@ -36,12 +41,17 @@ class Events extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->EventModel->validate_payload($in, true);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->EventModel->create($in, (int)$this->auth_user['id']);
 
         $title = trim((string)($in['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menambahkan kegiatan', 'Menambahkan kegiatan baru "' . $title . '"');
 
         api_ok($this->EventModel->find_by_id($id), null, 201);
@@ -49,28 +59,45 @@ class Events extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->EventModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
         api_ok($row);
     }
 
     public function update(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.events.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->EventModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $err = $this->EventModel->validate_payload($in, false);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $this->EventModel->update($id, $in);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Memperbarui kegiatan', 'Memperbarui kegiatan "' . $title . '"');
 
         api_ok($this->EventModel->find_by_id($id));
@@ -79,15 +106,23 @@ class Events extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.events.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->EventModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->EventModel->delete($id);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menghapus kegiatan', 'Menghapus kegiatan "' . $title . '"');
 
         api_ok(null, ['message' => 'Event dihapus']);

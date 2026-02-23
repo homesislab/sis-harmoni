@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Permissions extends MY_Controller
 {
@@ -16,7 +17,7 @@ class Permissions extends MY_Controller
         $items = $this->db
             ->select('id,code,name,description,created_at,updated_at')
             ->from('permissions')
-            ->order_by('code','ASC')
+            ->order_by('code', 'ASC')
             ->get()->result_array();
 
         api_ok(['items' => $items]);

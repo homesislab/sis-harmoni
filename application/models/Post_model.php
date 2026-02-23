@@ -1,35 +1,48 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Post_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Post_model extends MY_Model
 {
+    protected string $table_name = 'posts';
+
     public function validate_payload(array $in, bool $is_create): array
     {
         $err = [];
         if ($is_create) {
             foreach (['title','content'] as $f) {
-                if (!isset($in[$f]) || trim((string)$in[$f]) === '') $err[$f] = 'Wajib diisi';
+                if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
+                    $err[$f] = 'Wajib diisi';
+                }
             }
         }
 
         if (isset($in['category'])) {
             $c = trim((string)$in['category']);
-            if (!in_array($c, ['umum','keamanan','keuangan','layanan','fasilitas','lingkungan','administrasi','keagamaan','sosial'], true)) $err['category'] = 'Kategori tidak valid';
+            if (!in_array($c, ['umum','keamanan','keuangan','layanan','fasilitas','lingkungan','administrasi','keagamaan','sosial'], true)) {
+                $err['category'] = 'Kategori tidak valid';
+            }
         }
 
         if (isset($in['org'])) {
             $o = trim((string)$in['org']);
-            if (!in_array($o, ['paguyuban','dkm'], true)) $err['org'] = 'Organisasi tidak valid';
+            if (!in_array($o, ['paguyuban','dkm'], true)) {
+                $err['org'] = 'Organisasi tidak valid';
+            }
         }
 
         if (isset($in['status'])) {
             $s = trim((string)$in['status']);
-            if (!in_array($s, ['draft','published'], true)) $err['status'] = 'Status tidak valid';
+            if (!in_array($s, ['draft','published'], true)) {
+                $err['status'] = 'Status tidak valid';
+            }
         }
 
         if (array_key_exists('image_url', $in) && $in['image_url'] !== null) {
             $url = trim((string)$in['image_url']);
-            if ($url !== '' && strlen($url) > 255) $err['image_url'] = 'Maks 255 karakter';
+            if ($url !== '' && strlen($url) > 255) {
+                $err['image_url'] = 'Maks 255 karakter';
+            }
         }
 
         return $err;
@@ -69,7 +82,9 @@ class Post_model extends CI_Model
                 $upd[$k] = is_string($in[$k]) ? trim((string)$in[$k]) : $in[$k];
             }
         }
-        if ($upd) $this->db->where('id', $id)->update('posts', $upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update('posts', $upd);
+        }
     }
 
     public function delete(int $id): void
@@ -84,9 +99,15 @@ class Post_model extends CI_Model
         $qb = $this->db->from('posts p')
             ->join('users u', 'u.id = p.created_by', 'left');
 
-        if (!empty($filters['org'])) $qb->where('p.org', (string)$filters['org']);
-        if (!empty($filters['category'])) $qb->where('p.category', (string)$filters['category']);
-        if (!empty($filters['status'])) $qb->where('p.status', (string)$filters['status']);
+        if (!empty($filters['org'])) {
+            $qb->where('p.org', (string)$filters['org']);
+        }
+        if (!empty($filters['category'])) {
+            $qb->where('p.category', (string)$filters['category']);
+        }
+        if (!empty($filters['status'])) {
+            $qb->where('p.status', (string)$filters['status']);
+        }
 
         if (!empty($filters['q'])) {
             $q = (string)$filters['q'];
@@ -105,7 +126,7 @@ class Post_model extends CI_Model
 
         return [
             'items' => $items,
-            'meta' => ['page'=>$page,'per_page'=>$per,'total'=>$total],
+            'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
             'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),

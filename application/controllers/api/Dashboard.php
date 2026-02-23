@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Dashboard extends MY_Controller
 {
@@ -26,7 +27,9 @@ class Dashboard extends MY_Controller
      */
     private function qb_if($qb, $cond, $fn)
     {
-        if ($cond) $fn($qb);
+        if ($cond) {
+            $fn($qb);
+        }
         return $qb;
     }
 
@@ -43,7 +46,9 @@ class Dashboard extends MY_Controller
         }
         if (method_exists($this, 'user_id')) {
             $id = (int)$this->user_id();
-            if ($id > 0) return $id;
+            if ($id > 0) {
+                return $id;
+            }
         }
         $sid = (int)$this->session->userdata('user_id');
         return $sid > 0 ? $sid : 0;
@@ -52,14 +57,18 @@ class Dashboard extends MY_Controller
     private function my_household_id(): int
     {
         $uid = $this->my_user_id();
-        if ($uid <= 0) return 0;
+        if ($uid <= 0) {
+            return 0;
+        }
 
         if ($this->db->table_exists('users') && $this->db->field_exists('household_id', 'users')) {
             $hh = (int)($this->db->select('household_id')
                 ->from('users')
                 ->where('id', $uid)
                 ->get()->row()->household_id ?? 0);
-            if ($hh > 0) return $hh;
+            if ($hh > 0) {
+                return $hh;
+            }
         }
 
         $personId = 0;
@@ -76,7 +85,9 @@ class Dashboard extends MY_Controller
                     ->from('persons')
                     ->where('id', $personId)
                     ->get()->row()->household_id ?? 0);
-                if ($hh > 0) return $hh;
+                if ($hh > 0) {
+                    return $hh;
+                }
             }
 
             if ($this->db->table_exists('households') && $this->db->field_exists('head_person_id', 'households')) {
@@ -86,7 +97,9 @@ class Dashboard extends MY_Controller
                     ->order_by('id', 'desc')
                     ->limit(1)
                     ->get()->row()->id ?? 0);
-                if ($hh > 0) return $hh;
+                if ($hh > 0) {
+                    return $hh;
+                }
             }
         }
 
@@ -102,7 +115,9 @@ class Dashboard extends MY_Controller
                 ->order_by('id', 'desc')
                 ->limit(1)
                 ->get()->row()->household_id ?? 0);
-            if ($hh > 0) return $hh;
+            if ($hh > 0) {
+                return $hh;
+            }
         }
 
         return 0;
@@ -185,12 +200,20 @@ class Dashboard extends MY_Controller
             $dir = $r['direction'];
             $sum = (float)($r['s'] ?? 0);
             if ($t === 'paguyuban') {
-                if ($dir === 'in') $income_month_paguyuban = $sum;
-                if ($dir === 'out') $expense_month_paguyuban = $sum;
+                if ($dir === 'in') {
+                    $income_month_paguyuban = $sum;
+                }
+                if ($dir === 'out') {
+                    $expense_month_paguyuban = $sum;
+                }
             }
             if ($t === 'dkm') {
-                if ($dir === 'in') $income_month_dkm = $sum;
-                if ($dir === 'out') $expense_month_dkm = $sum;
+                if ($dir === 'in') {
+                    $income_month_dkm = $sum;
+                }
+                if ($dir === 'out') {
+                    $expense_month_dkm = $sum;
+                }
             }
         }
 
@@ -226,7 +249,9 @@ class Dashboard extends MY_Controller
         $scope = strtolower(trim((string)$this->input->get('scope')));
         $orgUnitId = trim((string)$this->input->get('org_unit_id')); // opsional
 
-        if ($scope !== 'dkm') $scope = 'paguyuban';
+        if ($scope !== 'dkm') {
+            $scope = 'paguyuban';
+        }
 
         if ($from === '' || $to === '') {
             $from = date('Y-m-01');
@@ -311,7 +336,7 @@ class Dashboard extends MY_Controller
                 ->where('type', $scope)
                 ->where('deleted_at IS NULL', null, false);
 
-            $this->qb_if($qbBal, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbBal, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                 $q->where('org_unit_id', $orgUnitId);
             });
 
@@ -326,7 +351,7 @@ class Dashboard extends MY_Controller
                 ->where('e.occurred_at <=', $toTs)
                 ->group_by('e.direction');
 
-            $this->qb_if($qbInOut, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbInOut, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                 $q->where('a.org_unit_id', $orgUnitId);
             });
 
@@ -335,8 +360,12 @@ class Dashboard extends MY_Controller
             $income = 0.0;
             $expense = 0.0;
             foreach ($rowsInOut as $r) {
-                if (($r['direction'] ?? '') === 'in') $income = (float)($r['s'] ?? 0);
-                if (($r['direction'] ?? '') === 'out') $expense = (float)($r['s'] ?? 0);
+                if (($r['direction'] ?? '') === 'in') {
+                    $income = (float)($r['s'] ?? 0);
+                }
+                if (($r['direction'] ?? '') === 'out') {
+                    $expense = (float)($r['s'] ?? 0);
+                }
             }
 
             $qbCash = $this->db->select("DATE_FORMAT(e.occurred_at,'%Y-%m') AS ym, e.direction, COALESCE(SUM(e.amount),0) AS s", false)
@@ -349,7 +378,7 @@ class Dashboard extends MY_Controller
                 ->group_by(['ym', 'e.direction'])
                 ->order_by('ym', 'asc');
 
-            $this->qb_if($qbCash, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbCash, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                 $q->where('a.org_unit_id', $orgUnitId);
             });
 
@@ -358,14 +387,20 @@ class Dashboard extends MY_Controller
             $cashflowMonthly = [];
             foreach ($cashflow as $r) {
                 $ym = (string)($r['ym'] ?? '');
-                if ($ym === '') continue;
+                if ($ym === '') {
+                    continue;
+                }
                 if (!isset($cashflowMonthly[$ym])) {
                     $cashflowMonthly[$ym] = ['month' => $ym, 'in' => 0.0, 'out' => 0.0];
                 }
                 $dir = (string)($r['direction'] ?? '');
                 $sum = (float)($r['s'] ?? 0);
-                if ($dir === 'in') $cashflowMonthly[$ym]['in'] = $sum;
-                if ($dir === 'out') $cashflowMonthly[$ym]['out'] = $sum;
+                if ($dir === 'in') {
+                    $cashflowMonthly[$ym]['in'] = $sum;
+                }
+                if ($dir === 'out') {
+                    $cashflowMonthly[$ym]['out'] = $sum;
+                }
             }
 
             $qbCats = $this->db->select('COALESCE(e.category, "Lainnya") AS category, COALESCE(SUM(e.amount),0) AS amount', false)
@@ -380,7 +415,7 @@ class Dashboard extends MY_Controller
                 ->order_by('amount', 'desc')
                 ->limit(5);
 
-            $this->qb_if($qbCats, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbCats, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                 $q->where('a.org_unit_id', $orgUnitId);
             });
 
@@ -403,7 +438,7 @@ class Dashboard extends MY_Controller
                     ->where('deleted_at IS NULL', null, false)
                     ->order_by('name', 'asc');
 
-                $this->qb_if($qbAcc, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+                $this->qb_if($qbAcc, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                     $q->where('org_unit_id', $orgUnitId);
                 });
 
@@ -419,7 +454,7 @@ class Dashboard extends MY_Controller
                     ->order_by('e.occurred_at', 'desc')
                     ->limit(10);
 
-                $this->qb_if($qbEnt, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+                $this->qb_if($qbEnt, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                     $q->where('a.org_unit_id', $orgUnitId);
                 });
 
@@ -432,7 +467,7 @@ class Dashboard extends MY_Controller
                     ->where('e.occurred_at >=', $fromTs)
                     ->where('e.occurred_at <=', $toTs);
 
-                $this->qb_if($qbCnt, $filterLedgerByOrg, function($q) use ($orgUnitId) {
+                $this->qb_if($qbCnt, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
                     $q->where('a.org_unit_id', $orgUnitId);
                 });
 
@@ -484,9 +519,12 @@ class Dashboard extends MY_Controller
                 ->where_in('period', $periods)
                 ->group_by('status');
 
-            $this->qb_if($qbRows, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbRows, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $rows = $qbRows->get()->result_array();
@@ -499,23 +537,31 @@ class Dashboard extends MY_Controller
             ];
             foreach ($rows as $r) {
                 $st = (string)($r['status'] ?? '');
-                if ($st === '' || !isset($statusMap[$st])) continue;
+                if ($st === '' || !isset($statusMap[$st])) {
+                    continue;
+                }
                 $statusMap[$st] = (int)($r['c'] ?? 0);
             }
 
             $qbTotal = $this->db->from('invoices')->where_in('period', $periods);
-            $this->qb_if($qbTotal, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbTotal, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $invoiceTotal = (int)$qbTotal->count_all_results();
 
             $qbPaid = $this->db->from('invoices')
                 ->where('status', 'paid')
                 ->where_in('period', $periods);
-            $this->qb_if($qbPaid, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbPaid, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $invoicePaid = (int)$qbPaid->count_all_results();
 
@@ -524,9 +570,12 @@ class Dashboard extends MY_Controller
             $qbUnpaidInv = $this->db->from('invoices')
                 ->where_in('status', ['unpaid', 'partial'])
                 ->where_in('period', $periods);
-            $this->qb_if($qbUnpaidInv, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbUnpaidInv, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $unpaidInvoices = (int)$qbUnpaidInv->count_all_results();
 
@@ -534,9 +583,12 @@ class Dashboard extends MY_Controller
                 ->from('invoices')
                 ->where_in('status', ['unpaid', 'partial'])
                 ->where_in('period', $periods);
-            $this->qb_if($qbUnpaidAmt, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbUnpaidAmt, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $unpaidAmount = (float)($qbUnpaidAmt->get()->row()->s ?? 0);
 
@@ -544,9 +596,12 @@ class Dashboard extends MY_Controller
                 ->from('invoices')
                 ->where_in('status', ['unpaid', 'partial'])
                 ->where_in('period', $periods);
-            $this->qb_if($qbUnpaidHH, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbUnpaidHH, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $unpaidHouseholds = (int)($qbUnpaidHH->get()->row()->c ?? 0);
 
@@ -567,9 +622,12 @@ class Dashboard extends MY_Controller
                 ->order_by('i.id', 'desc')
                 ->limit(5);
 
-            $this->qb_if($qbLatestInv, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('i.household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbLatestInv, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('i.household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $qbLatestInv->group_by('i.id');
@@ -593,9 +651,12 @@ class Dashboard extends MY_Controller
                 ->order_by('i.total_amount', 'desc')
                 ->limit(5);
 
-            $this->qb_if($qbTopUnpaid, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('i.household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbTopUnpaid, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('i.household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $qbTopUnpaid->group_by('i.id');
@@ -609,9 +670,12 @@ class Dashboard extends MY_Controller
                 ->where_in('status', ['unpaid', 'partial'])
                 ->group_by('period')
                 ->order_by('period', 'asc');
-            $this->qb_if($qbTrend, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbTrend, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $unpaidTrendRows = $qbTrend->get()->result_array();
 
@@ -621,7 +685,9 @@ class Dashboard extends MY_Controller
             }
             foreach ($unpaidTrendRows as $r) {
                 $p = (string)($r['period'] ?? '');
-                if ($p === '' || !isset($unpaidTrend[$p])) continue;
+                if ($p === '' || !isset($unpaidTrend[$p])) {
+                    continue;
+                }
                 $unpaidTrend[$p]['amount'] = (float)($r['amount'] ?? 0);
             }
 
@@ -630,9 +696,12 @@ class Dashboard extends MY_Controller
                 ->where_in('period', $periods)
                 ->group_by(['period', 'status'])
                 ->order_by('period', 'asc');
-            $this->qb_if($qbStMonth, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbStMonth, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $statusMonthlyRows = $qbStMonth->get()->result_array();
 
@@ -643,7 +712,9 @@ class Dashboard extends MY_Controller
             foreach ($statusMonthlyRows as $r) {
                 $p = (string)($r['period'] ?? '');
                 $st = (string)($r['status'] ?? '');
-                if ($p === '' || $st === '' || !isset($statusMonthly[$p]) || !isset($statusMonthly[$p][$st])) continue;
+                if ($p === '' || $st === '' || !isset($statusMonthly[$p]) || !isset($statusMonthly[$p][$st])) {
+                    continue;
+                }
                 $statusMonthly[$p][$st] = (int)($r['c'] ?? 0);
             }
 
@@ -660,9 +731,12 @@ class Dashboard extends MY_Controller
                 ->order_by('amount', 'desc')
                 ->limit(10);
 
-            $this->qb_if($qbTopHH, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('i.household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbTopHH, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('i.household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $topHouseholds = $qbTopHH->get()->result_array();
@@ -672,9 +746,12 @@ class Dashboard extends MY_Controller
                 ->where('paid_at >=', $fromTs)
                 ->where('paid_at <=', $toTs);
 
-            $this->qb_if($qbPayPend, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('payer_household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbPayPend, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('payer_household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $paymentsPending = (int)$qbPayPend->count_all_results();
@@ -721,12 +798,17 @@ class Dashboard extends MY_Controller
             if ($allocExists && $invExists) {
                 $qbPayPendLatest->join('payment_invoice_allocations pia', 'pia.payment_id = p.id', 'left');
                 $qbPayPendLatest->join('invoices inv', 'inv.id = pia.invoice_id', 'left');
-                if ($joinCt2) $qbPayPendLatest->join('charge_types ct2', 'ct2.id = inv.charge_type_id', 'left');
+                if ($joinCt2) {
+                    $qbPayPendLatest->join('charge_types ct2', 'ct2.id = inv.charge_type_id', 'left');
+                }
             }
 
-            $this->qb_if($qbPayPendLatest, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('p.payer_household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbPayPendLatest, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('p.payer_household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $qbPayPendLatest
@@ -761,7 +843,9 @@ class Dashboard extends MY_Controller
             if ($allocExists && $invExists) {
                 $qbPayLatest->join('payment_invoice_allocations pia', 'pia.payment_id = p.id', 'left');
                 $qbPayLatest->join('invoices inv', 'inv.id = pia.invoice_id', 'left');
-                if ($joinCt2) $qbPayLatest->join('charge_types ct2', 'ct2.id = inv.charge_type_id', 'left');
+                if ($joinCt2) {
+                    $qbPayLatest->join('charge_types ct2', 'ct2.id = inv.charge_type_id', 'left');
+                }
             }
 
             $qbPayLatest
@@ -770,9 +854,12 @@ class Dashboard extends MY_Controller
                 ->order_by('p.paid_at', 'desc')
                 ->limit(5);
 
-            $this->qb_if($qbPayLatest, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('p.payer_household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbPayLatest, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('p.payer_household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $qbPayLatest->group_by('p.id');
@@ -784,31 +871,41 @@ class Dashboard extends MY_Controller
                 ->where('paid_at >=', $fromTs)
                 ->where('paid_at <=', $toTs);
 
-            $this->qb_if($qbPaidAmt, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('payer_household_id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbPaidAmt, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('payer_household_id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $paidAmount = (float)($qbPaidAmt->get()->row()->s ?? 0);
 
             $qbHHCount = $this->db->from('households');
-            $this->qb_if($qbHHCount, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHHCount, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $totalHouseholds = (int)$qbHHCount->count_all_results();
 
             $avgPaidPerHousehold = $totalHouseholds > 0 ? round($paidAmount / $totalHouseholds, 2) : 0.0;
 
-            $normHousehold = function($kk, $block = null, $number = null, $headName = null) {
+            $normHousehold = function ($kk, $block = null, $number = null, $headName = null) {
                 $kk = (string)($kk ?? '');
                 $block = strtoupper(trim((string)($block ?? '')));
                 $number = trim((string)($number ?? ''));
                 $headName = trim((string)($headName ?? ''));
 
                 $unit = ($block !== '' && $number !== '') ? ($block . '-' . $number) : '';
-                if ($unit === '' && $kk !== '') $unit = 'KK ' . $kk;
-                if ($unit === '') $unit = 'KK';
+                if ($unit === '' && $kk !== '') {
+                    $unit = 'KK ' . $kk;
+                }
+                if ($unit === '') {
+                    $unit = 'KK';
+                }
 
                 $headShort = $headName !== '' ? preg_split('/\s+/', $headName)[0] : '';
 
@@ -953,30 +1050,42 @@ class Dashboard extends MY_Controller
             $useHHFilter = is_array($orgHouseholdIds);
 
             $qbHT = $this->db->from('houses');
-            $this->qb_if($qbHT, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHT, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $housesTotal = (int)$qbHT->count_all_results();
 
             $qbHV = $this->db->from('houses')->where('status', 'vacant');
-            $this->qb_if($qbHV, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHV, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $housesVacant = (int)$qbHV->count_all_results();
 
             $qbHI = $this->db->from('houses')->where_in('status', ['occupied', 'rented', 'owned']);
-            $this->qb_if($qbHI, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHI, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $housesInhabited = (int)$qbHI->count_all_results();
 
             $qbHHT = $this->db->from('households');
-            $this->qb_if($qbHHT, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                if (!empty($orgHouseholdIds)) $q->where_in('id', $orgHouseholdIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHHT, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                if (!empty($orgHouseholdIds)) {
+                    $q->where_in('id', $orgHouseholdIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $householdsTotal = (int)$qbHHT->count_all_results();
 
@@ -986,9 +1095,12 @@ class Dashboard extends MY_Controller
                 ->from('houses')
                 ->group_by('status')
                 ->order_by('c', 'desc');
-            $this->qb_if($qbHBS, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbHBS, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $housesByStatus = $qbHBS->get()->result_array();
 
@@ -1001,9 +1113,12 @@ class Dashboard extends MY_Controller
                     ->order_by('c.id', 'desc')
                     ->limit(10);
 
-                $this->qb_if($qbClaims, $useHouseFilter, function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('c.house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbClaims, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('c.house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
 
                 $claims = $qbClaims->get()->result_array();
@@ -1018,13 +1133,19 @@ class Dashboard extends MY_Controller
                     ->order_by('o.id', 'desc')
                     ->limit(10);
 
-                $this->qb_if($qbOcc, $useHouseFilter, function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('o.house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbOcc, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('o.house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
-                $this->qb_if($qbOcc, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                    if (!empty($orgHouseholdIds)) $q->where_in('o.household_id', $orgHouseholdIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbOcc, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                    if (!empty($orgHouseholdIds)) {
+                        $q->where_in('o.household_id', $orgHouseholdIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
 
                 $occupancies = $qbOcc->get()->result_array();
@@ -1061,9 +1182,12 @@ class Dashboard extends MY_Controller
 
             $qbEmOpen = $this->db->from('emergency_reports')
                 ->where_in('status', ['open', 'acknowledged']);
-            $this->qb_if($qbEmOpen, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('house_id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbEmOpen, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('house_id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $emOpen = (int)$qbEmOpen->count_all_results();
 
@@ -1072,9 +1196,12 @@ class Dashboard extends MY_Controller
                 ->join('houses hs', 'hs.id = e.house_id', 'left')
                 ->order_by('e.id', 'desc')
                 ->limit(10);
-            $this->qb_if($qbEmLatest, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('e.house_id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbEmLatest, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('e.house_id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $emLatest = $qbEmLatest->get()->result_array();
 
@@ -1084,17 +1211,24 @@ class Dashboard extends MY_Controller
                 ->where('e.created_at <=', $toTs)
                 ->group_by('ym')
                 ->order_by('ym', 'asc');
-            $this->qb_if($qbEmMonthly, $useHouseFilter, function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('e.house_id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbEmMonthly, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('e.house_id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $emMonthlyRows = $qbEmMonthly->get()->result_array();
 
             $emMonthly = [];
-            foreach ($periods as $p) $emMonthly[$p] = ['month' => $p, 'count' => 0];
+            foreach ($periods as $p) {
+                $emMonthly[$p] = ['month' => $p, 'count' => 0];
+            }
             foreach ($emMonthlyRows as $r) {
                 $ym = (string)($r['ym'] ?? '');
-                if ($ym !== '' && isset($emMonthly[$ym])) $emMonthly[$ym]['count'] = (int)($r['c'] ?? 0);
+                if ($ym !== '' && isset($emMonthly[$ym])) {
+                    $emMonthly[$ym]['count'] = (int)($r['c'] ?? 0);
+                }
             }
 
             foreach ($emLatest as &$e) {
@@ -1104,9 +1238,12 @@ class Dashboard extends MY_Controller
             unset($e);
 
             $qbFbOpen = $this->db->from('feedbacks')->where_in('status', ['open', 'in_review']);
-            $this->qb_if($qbFbOpen, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('house_id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbFbOpen, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('house_id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
             $fbOpen = (int)$qbFbOpen->count_all_results();
 
@@ -1121,9 +1258,12 @@ class Dashboard extends MY_Controller
                     ->order_by('c', 'desc')
                     ->limit(5);
 
-                $this->qb_if($qbFbTop, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('f.house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbFbTop, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('f.house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
 
                 $fbTopCats = $qbFbTop->get()->result_array();
@@ -1135,9 +1275,12 @@ class Dashboard extends MY_Controller
                 ->order_by('f.id', 'desc')
                 ->limit(10);
 
-            $this->qb_if($qbFbLatest, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function($q) use ($orgHouseIds) {
-                if (!empty($orgHouseIds)) $q->where_in('f.house_id', $orgHouseIds);
-                else $q->where('1=0', null, false);
+            $this->qb_if($qbFbLatest, $useHouseFilter && $this->db->field_exists('house_id', 'feedbacks'), function ($q) use ($orgHouseIds) {
+                if (!empty($orgHouseIds)) {
+                    $q->where_in('f.house_id', $orgHouseIds);
+                } else {
+                    $q->where('1=0', null, false);
+                }
             });
 
             $fbLatest = $qbFbLatest->get()->result_array();
@@ -1153,18 +1296,24 @@ class Dashboard extends MY_Controller
                 $qbGT = $this->db->from('guest_visits')
                     ->where('visit_at >=', $todayStart)
                     ->where('visit_at <=', $todayEnd);
-                $this->qb_if($qbGT, $useHouseFilter, function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbGT, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
                 $guestToday = (int)$qbGT->count_all_results();
 
                 $qbGW = $this->db->from('guest_visits')
                     ->where('visit_at >=', $weekStart)
                     ->where('visit_at <=', $todayEnd);
-                $this->qb_if($qbGW, $useHouseFilter, function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbGW, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
                 $guestWeek = (int)$qbGW->count_all_results();
 
@@ -1173,9 +1322,12 @@ class Dashboard extends MY_Controller
                     ->join('houses hs', 'hs.id = g.house_id', 'left')
                     ->order_by('g.id', 'desc')
                     ->limit(10);
-                $this->qb_if($qbGL, $useHouseFilter, function($q) use ($orgHouseIds) {
-                    if (!empty($orgHouseIds)) $q->where_in('g.house_id', $orgHouseIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbGL, $useHouseFilter, function ($q) use ($orgHouseIds) {
+                    if (!empty($orgHouseIds)) {
+                        $q->where_in('g.house_id', $orgHouseIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
                 $guestLatest = $qbGL->get()->result_array();
             }
@@ -1225,9 +1377,12 @@ class Dashboard extends MY_Controller
                 $useHHFilter = is_array($orgHouseholdIds);
 
                 $qbTH = $this->db->from('households');
-                $this->qb_if($qbTH, $useHHFilter, function($q) use ($orgHouseholdIds) {
-                    if (!empty($orgHouseholdIds)) $q->where_in('id', $orgHouseholdIds);
-                    else $q->where('1=0', null, false);
+                $this->qb_if($qbTH, $useHHFilter, function ($q) use ($orgHouseholdIds) {
+                    if (!empty($orgHouseholdIds)) {
+                        $q->where_in('id', $orgHouseholdIds);
+                    } else {
+                        $q->where('1=0', null, false);
+                    }
                 });
                 $totalHouseholdsForPoll = (int)$qbTH->count_all_results();
 
@@ -1238,7 +1393,9 @@ class Dashboard extends MY_Controller
 
                 foreach ($pollsActive as $p) {
                     $pollId = (int)($p['id'] ?? 0);
-                    if ($pollId <= 0) continue;
+                    if ($pollId <= 0) {
+                        continue;
+                    }
 
                     $scopePoll = (string)($p['vote_scope'] ?? 'household');
                     $col = ($scopePoll === 'household') ? 'household_id' : 'user_id';
@@ -1284,34 +1441,46 @@ class Dashboard extends MY_Controller
             $filterProdByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'local_products'));
 
             $qb = $this->db->from('local_businesses')->where('status', 'pending');
-            if ($filterBizByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterBizByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $bizPending = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->from('local_businesses')->where('status', 'active');
-            if ($filterBizByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterBizByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $bizActive = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->from('local_products')->where('status', 'active');
-            if ($filterProdByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterProdByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $prodActive = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->from('local_products');
-            if ($filterProdByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterProdByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $prodTotal = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->select('status, COUNT(*) AS c', false)
                 ->from('local_businesses');
-            if ($filterBizByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterBizByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $bizByStatus = $qb->group_by('status')->order_by('c', 'desc')->get()->result_array();
             $this->db->reset_query();
 
             $qb = $this->db->select('id, name, category, status, created_at')
                 ->from('local_businesses');
-            if ($filterBizByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterBizByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $bizLatest = $qb->order_by('id', 'desc')->limit(10)->get()->result_array();
             $this->db->reset_query();
 
@@ -1329,17 +1498,23 @@ class Dashboard extends MY_Controller
             $filterInvByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'inventories'));
 
             $qb = $this->db->from('inventories');
-            if ($filterInvByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterInvByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $invTotal = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->from('inventories')->where('status', 'active');
-            if ($filterInvByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterInvByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $invActive = (int)$qb->count_all_results();
             $this->db->reset_query();
 
             $qb = $this->db->from('inventories')->where('status', 'archived');
-            if ($filterInvByOrg) $qb->where('org_unit_id', $orgUnitId);
+            if ($filterInvByOrg) {
+                $qb->where('org_unit_id', $orgUnitId);
+            }
             $invArchived = (int)$qb->count_all_results();
             $this->db->reset_query();
 
@@ -1348,7 +1523,9 @@ class Dashboard extends MY_Controller
                 $qb = $this->db->select('l.id, l.inventory_id, i.name AS inventory_name, l.action, l.qty_change AS qty, l.note, l.created_at')
                     ->from('inventory_logs l')
                     ->join('inventories i', 'i.id = l.inventory_id', 'left');
-                if ($filterInvByOrg) $qb->where('i.org_unit_id', $orgUnitId);
+                if ($filterInvByOrg) {
+                    $qb->where('i.org_unit_id', $orgUnitId);
+                }
                 $logsLatest = $qb->order_by('l.id', 'desc')->limit(10)->get()->result_array();
                 $this->db->reset_query();
             }
@@ -1368,7 +1545,7 @@ class Dashboard extends MY_Controller
             $qbFundActive = $this->db->from('fundraisers')
                 ->where('status', 'active')
                 ->where('category', $scope);
-            $this->qb_if($qbFundActive, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbFundActive, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('org_unit_id', $orgUnitId);
             });
             $fundActive = (int)$qbFundActive->count_all_results();
@@ -1380,7 +1557,7 @@ class Dashboard extends MY_Controller
                 ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
-            $this->qb_if($qbDonTotal, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbDonTotal, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('f.org_unit_id', $orgUnitId);
             });
             $donTotal = (float)($qbDonTotal->get()->row()->s ?? 0);
@@ -1390,7 +1567,7 @@ class Dashboard extends MY_Controller
                 ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
-            $this->qb_if($qbDonCount, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbDonCount, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('f.org_unit_id', $orgUnitId);
             });
             $donCount = (int)$qbDonCount->count_all_results();
@@ -1401,7 +1578,7 @@ class Dashboard extends MY_Controller
                 ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
-            $this->qb_if($qbDonPending, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbDonPending, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('f.org_unit_id', $orgUnitId);
             });
             $donPending = (int)$qbDonPending->count_all_results();
@@ -1414,7 +1591,7 @@ class Dashboard extends MY_Controller
                 ->where('d.paid_at <=', $toTs)
                 ->order_by('d.paid_at', 'desc')
                 ->limit(10);
-            $this->qb_if($qbDonLatest, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbDonLatest, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('f.org_unit_id', $orgUnitId);
             });
             $donLatest = $qbDonLatest->get()->result_array();
@@ -1427,7 +1604,7 @@ class Dashboard extends MY_Controller
                 ->group_by('f.id')
                 ->order_by('amount', 'desc')
                 ->limit(5);
-            $this->qb_if($qbPerFund, $filterFundByOrg, function($q) use ($orgUnitId) {
+            $this->qb_if($qbPerFund, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('f.org_unit_id', $orgUnitId);
             });
             $perFund = $qbPerFund->get()->result_array();
@@ -1440,7 +1617,7 @@ class Dashboard extends MY_Controller
                     ->where('f.category', $scope)
                     ->order_by('u.id', 'desc')
                     ->limit(10);
-                $this->qb_if($qbUpd, $filterFundByOrg, function($q) use ($orgUnitId) {
+                $this->qb_if($qbUpd, $filterFundByOrg, function ($q) use ($orgUnitId) {
                     $q->where('f.org_unit_id', $orgUnitId);
                 });
                 $updatesLatest = $qbUpd->get()->result_array();
@@ -1490,9 +1667,12 @@ class Dashboard extends MY_Controller
         ->where_in('status', ['unpaid', 'partial'])
         ->group_by('bucket');
 
-        $this->qb_if($qb, is_array($householdIds), function($q) use ($householdIds) {
-            if (!empty($householdIds)) $q->where_in('household_id', $householdIds);
-            else $q->where('1=0', null, false);
+        $this->qb_if($qb, is_array($householdIds), function ($q) use ($householdIds) {
+            if (!empty($householdIds)) {
+                $q->where_in('household_id', $householdIds);
+            } else {
+                $q->where('1=0', null, false);
+            }
         });
 
         $rows = $qb->get()->result_array();
@@ -1505,7 +1685,9 @@ class Dashboard extends MY_Controller
 
         foreach ($rows as $r) {
             $k = (string)($r['bucket'] ?? '');
-            if ($k === '' || !isset($b[$k])) continue;
+            if ($k === '' || !isset($b[$k])) {
+                continue;
+            }
             $b[$k]['count'] = (int)($r['c'] ?? 0);
             $b[$k]['amount'] = (float)($r['amount'] ?? 0);
         }

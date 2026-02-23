@@ -84,7 +84,7 @@ if ($__sp_db_port && $__sp_db_port !== 3306 && strpos($__sp_db_host, ':') === FA
 $db['default'] = array(
 	'dsn'	=> '',
 	'hostname' => $__sp_db_hostname,
-	// 'port' => $__sp_db_port,
+	'port' => $__sp_db_port,
 	'username' => ($_ENV['SIS_PAGUYUBAN_DB_USER'] ?? getenv('SIS_PAGUYUBAN_DB_USER')) ?: 'root',
 	'password' => ($_ENV['SIS_PAGUYUBAN_DB_PASS'] ?? getenv('SIS_PAGUYUBAN_DB_PASS')) ?: '',
 	'database' => ($_ENV['SIS_PAGUYUBAN_DB_NAME'] ?? getenv('SIS_PAGUYUBAN_DB_NAME')) ?: 'sis_paguyuban',

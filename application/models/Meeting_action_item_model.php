@@ -1,13 +1,16 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Meeting_action_item_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Meeting_action_item_model extends MY_Model
 {
+    protected string $table_name = 'meeting_action_items';
+
     private string $table = 'meeting_action_items';
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where($this->table, ['id'=>$id])->row_array();
+        $row = $this->db->get_where($this->table, ['id' => $id])->row_array();
         return $row ?: null;
     }
 
@@ -15,7 +18,7 @@ class Meeting_action_item_model extends CI_Model
     {
         return $this->db->from($this->table)
             ->where('meeting_minute_id', $meeting_minute_id)
-            ->order_by('id','ASC')->get()->result_array();
+            ->order_by('id', 'ASC')->get()->result_array();
     }
 
     public function create(array $data): int
@@ -41,19 +44,21 @@ class Meeting_action_item_model extends CI_Model
         $allowed = ['description','pic_user_id','pic_person_id','due_at','status','done_at','note'];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k,$data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
         if ($upd) {
             if (isset($upd['status']) && $upd['status'] === 'done' && !isset($upd['done_at'])) {
                 $upd['done_at'] = date('Y-m-d H:i:s');
             }
             $upd['updated_at'] = date('Y-m-d H:i:s');
-            $this->db->where('id',$id)->update($this->table,$upd);
+            $this->db->where('id', $id)->update($this->table, $upd);
         }
     }
 
     public function delete(int $id): void
     {
-        $this->db->where('id',$id)->delete($this->table);
+        $this->db->where('id', $id)->delete($this->table);
     }
 }

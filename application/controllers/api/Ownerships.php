@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Ownerships extends MY_Controller
 {
@@ -16,8 +17,9 @@ class Ownerships extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         if ($this->has_permission('app.services.master.houses.manage')) {
             $res = $this->OwnershipModel->paginate($page, $per);
@@ -44,14 +46,31 @@ class Ownerships extends MY_Controller
         $note = isset($in['note']) ? trim((string)$in['note']) : null;
 
         $err = [];
-        if ($house_id <= 0) $err['house_id'] = 'Wajib diisi';
-        if ($person_id <= 0) $err['person_id'] = 'Wajib diisi';
-        if ($start_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) $err['start_date'] = 'Format YYYY-MM-DD';
-        if ($end_date !== null && $end_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) $err['end_date'] = 'Format YYYY-MM-DD';
-        if ($err) { api_validation_error($err); return; }
+        if ($house_id <= 0) {
+            $err['house_id'] = 'Wajib diisi';
+        }
+        if ($person_id <= 0) {
+            $err['person_id'] = 'Wajib diisi';
+        }
+        if ($start_date === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $start_date)) {
+            $err['start_date'] = 'Format YYYY-MM-DD';
+        }
+        if ($end_date !== null && $end_date !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end_date)) {
+            $err['end_date'] = 'Format YYYY-MM-DD';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
-        if (!$this->HouseModel->find_by_id($house_id)) { api_validation_error(['house_id' => 'House tidak ditemukan']); return; }
-        if (!$this->PersonModel->find_by_id($person_id)) { api_validation_error(['person_id' => 'Person tidak ditemukan']); return; }
+        if (!$this->HouseModel->find_by_id($house_id)) {
+            api_validation_error(['house_id' => 'House tidak ditemukan']);
+            return;
+        }
+        if (!$this->PersonModel->find_by_id($person_id)) {
+            api_validation_error(['person_id' => 'Person tidak ditemukan']);
+            return;
+        }
 
         $id = $this->OwnershipModel->create([
             'house_id' => $house_id,

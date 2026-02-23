@@ -1,7 +1,8 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class HouseholdMembers extends CI_Controller
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class HouseholdMembers extends MY_Controller
 {
     public function __construct()
     {
@@ -13,7 +14,7 @@ class HouseholdMembers extends CI_Controller
 
     public function store(): void
     {
-        $input = json_decode($this->input->raw_input_stream, true) ?: $this->input->post(NULL, true);
+        $input = json_decode($this->input->raw_input_stream, true) ?: $this->input->post(null, true);
 
         $household_id = (int)($input['household_id'] ?? 0);
         $person_id    = (int)($input['person_id'] ?? 0);
@@ -34,9 +35,12 @@ class HouseholdMembers extends CI_Controller
 
     public function update(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
-        $input = json_decode($this->input->raw_input_stream, true) ?: $this->input->post(NULL, true);
+        $input = json_decode($this->input->raw_input_stream, true) ?: $this->input->post(null, true);
         $relationship = trim((string)($input['relationship'] ?? ($input['role'] ?? '')));
         if ($relationship === '') {
             api_fail('VALIDATION_ERROR', 'relationship wajib diisi', null, 422);
@@ -53,7 +57,10 @@ class HouseholdMembers extends CI_Controller
 
     public function destroy(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $ok = $this->households->remove_member($id);
         if (!$ok) {

@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Invoices extends MY_Controller
 {
@@ -9,9 +10,9 @@ class Invoices extends MY_Controller
         $this->as_api();
         $this->require_auth();
 
-        $this->load->model('Invoice_model','InvoiceModel');
-        $this->load->model('Payment_model','PaymentModel');
-        $this->load->model('Charge_model','ChargeModel');
+        $this->load->model('Invoice_model', 'InvoiceModel');
+        $this->load->model('Payment_model', 'PaymentModel');
+        $this->load->model('Charge_model', 'ChargeModel');
     }
 
     /**
@@ -25,13 +26,17 @@ class Invoices extends MY_Controller
      */
     private function attach_payment_agg_to_invoices(array $items): array
     {
-        if (empty($items)) return $items;
+        if (empty($items)) {
+            return $items;
+        }
 
-        $ids = array_values(array_filter(array_map(function($x){
+        $ids = array_values(array_filter(array_map(function ($x) {
             return (int)($x['id'] ?? 0);
         }, $items)));
 
-        if (empty($ids)) return $items;
+        if (empty($ids)) {
+            return $items;
+        }
 
         $rows = $this->db->select("
                 pii.invoice_id,
@@ -100,8 +105,9 @@ class Invoices extends MY_Controller
     {
         $this->require_any_permission(['app.services.finance.invoices.manage']);
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(200, max(1, (int)$this->input->get('per_page') ?: 30));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'household_id' => $this->input->get('household_id') ? (int)$this->input->get('household_id') : null,
@@ -131,12 +137,23 @@ class Invoices extends MY_Controller
         $period         = trim((string)($in['period'] ?? ''));
         $total_amount   = isset($in['total_amount']) ? (float)$in['total_amount'] : -1;
 
-        if ($household_id <= 0) $err['household_id'] = 'Wajib diisi';
-        if ($charge_type_id <= 0) $err['charge_type_id'] = 'Wajib diisi';
-        if ($period === '') $err['period'] = 'Wajib diisi (YYYY-MM)';
-        if ($total_amount < 0) $err['total_amount'] = 'Wajib diisi (>=0)';
+        if ($household_id <= 0) {
+            $err['household_id'] = 'Wajib diisi';
+        }
+        if ($charge_type_id <= 0) {
+            $err['charge_type_id'] = 'Wajib diisi';
+        }
+        if ($period === '') {
+            $err['period'] = 'Wajib diisi (YYYY-MM)';
+        }
+        if ($total_amount < 0) {
+            $err['total_amount'] = 'Wajib diisi (>=0)';
+        }
 
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->InvoiceModel->create([
             'household_id'   => $household_id,
@@ -158,10 +175,16 @@ class Invoices extends MY_Controller
     public function show(int $id = 0): void
     {
         $this->require_any_permission(['app.services.finance.invoices.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $inv = $this->InvoiceModel->find_by_id($id);
-        if (!$inv) { api_not_found(); return; }
+        if (!$inv) {
+            api_not_found();
+            return;
+        }
 
         $inv = $this->attach_payment_agg_to_invoice($inv, (int)$id);
 
@@ -182,17 +205,29 @@ class Invoices extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_any_permission(['app.services.finance.invoices.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->InvoiceModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $payload = [];
 
-        if (array_key_exists('note', $in)) $payload['note'] = $in['note'];
-        if (array_key_exists('status', $in)) $payload['status'] = $in['status'];
-        if (array_key_exists('total_amount', $in)) $payload['total_amount'] = (float)$in['total_amount'];
+        if (array_key_exists('note', $in)) {
+            $payload['note'] = $in['note'];
+        }
+        if (array_key_exists('status', $in)) {
+            $payload['status'] = $in['status'];
+        }
+        if (array_key_exists('total_amount', $in)) {
+            $payload['total_amount'] = (float)$in['total_amount'];
+        }
 
         if (!$payload) {
             api_validation_error(['payload' => 'Tidak ada field yang diupdate']);
@@ -212,10 +247,16 @@ class Invoices extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_any_permission(['app.services.finance.invoices.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->InvoiceModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->InvoiceModel->delete($id);
         api_ok(null, ['message' => 'Invoice dihapus']);

@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class MeetingActionItems extends MY_Controller
 {
@@ -14,9 +15,15 @@ class MeetingActionItems extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_permission('app.services.notes.meeting_minutes.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ActionItemModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $this->ActionItemModel->update($id, $in);
@@ -26,10 +33,16 @@ class MeetingActionItems extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_permission('app.services.notes.meeting_minutes.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->ActionItemModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
         $this->ActionItemModel->delete($id);
-        api_ok(['ok'=>true]);
+        api_ok(['ok' => true]);
     }
 }

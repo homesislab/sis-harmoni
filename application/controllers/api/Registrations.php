@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Registrations extends MY_Controller
 {
@@ -53,14 +54,18 @@ class Registrations extends MY_Controller
                     ->get()->result_array();
             }
 
-            $claim_statuses = array_map(fn($x) => $x['status'], $claim_rows);
+            $claim_statuses = array_map(fn ($x) => $x['status'], $claim_rows);
             $derived = $this->compute_status($claim_statuses);
 
-            if ($status && $derived !== $status) continue;
+            if ($status && $derived !== $status) {
+                continue;
+            }
 
             $unit_codes = [];
             foreach ($claim_rows as $c) {
-                if (!empty($c['house_code'])) $unit_codes[] = $c['house_code'];
+                if (!empty($c['house_code'])) {
+                    $unit_codes[] = $c['house_code'];
+                }
             }
             $unit_codes = array_values(array_unique($unit_codes));
 
@@ -90,7 +95,10 @@ class Registrations extends MY_Controller
 
     public function show(int $household_id = 0): void
     {
-        if ($household_id <= 0) { api_not_found(); return; }
+        if ($household_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $hh = $this->db
             ->select('hh.*, p.full_name AS head_name, p.nik AS head_nik, p.phone AS head_phone, p.email AS head_email')
@@ -98,7 +106,10 @@ class Registrations extends MY_Controller
             ->join('persons p', 'p.id = hh.head_person_id', 'inner')
             ->where('hh.id', $household_id)
             ->get()->row_array();
-        if (!$hh) { api_not_found(); return; }
+        if (!$hh) {
+            api_not_found();
+            return;
+        }
 
         $members = $this->db
             ->select('hm.relationship, p.*')
@@ -108,7 +119,7 @@ class Registrations extends MY_Controller
             ->order_by('hm.id', 'ASC')
             ->get()->result_array();
 
-        $person_ids = array_map(fn($x) => (int)$x['id'], $members);
+        $person_ids = array_map(fn ($x) => (int)$x['id'], $members);
         $person_ids[] = (int)$hh['head_person_id'];
         $person_ids = array_values(array_unique(array_filter($person_ids)));
 
@@ -158,7 +169,7 @@ class Registrations extends MY_Controller
             ->order_by('oc.id', 'DESC')
             ->get()->result_array();
 
-        $claim_statuses = array_map(fn($x) => $x['status'], $claims);
+        $claim_statuses = array_map(fn ($x) => $x['status'], $claims);
         $derived = $this->compute_status($claim_statuses);
 
         api_ok([
@@ -175,10 +186,16 @@ class Registrations extends MY_Controller
 
     public function approve(int $household_id = 0): void
     {
-        if ($household_id <= 0) { api_not_found(); return; }
+        if ($household_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $detail = $this->db->get_where('households', ['id' => $household_id])->row_array();
-        if (!$detail) { api_not_found(); return; }
+        if (!$detail) {
+            api_not_found();
+            return;
+        }
 
         $ids = $this->get_household_person_ids($household_id);
 
@@ -202,7 +219,7 @@ class Registrations extends MY_Controller
 
         $primaryClaims = array_values(array_filter(
             $pendingClaims,
-            fn($c) => (int)($c['is_primary'] ?? 0) === 1
+            fn ($c) => (int)($c['is_primary'] ?? 0) === 1
         ));
         $primary_count = count($primaryClaims);
 
@@ -236,7 +253,7 @@ class Registrations extends MY_Controller
         $this->db->trans_start();
 
         try {
-            $claimIds = array_map(fn($x) => (int)$x['id'], $pendingClaims);
+            $claimIds = array_map(fn ($x) => (int)$x['id'], $pendingClaims);
             $this->db
                 ->where_in('id', $claimIds)
                 ->update('house_claims', [
@@ -352,7 +369,9 @@ class Registrations extends MY_Controller
             }
 
             $this->db->trans_complete();
-            if ($this->db->trans_status() === false) throw new Exception('Transaksi gagal');
+            if ($this->db->trans_status() === false) {
+                throw new Exception('Transaksi gagal');
+            }
 
             api_ok(['ok' => true]);
 
@@ -364,10 +383,16 @@ class Registrations extends MY_Controller
 
     public function reject(int $household_id = 0): void
     {
-        if ($household_id <= 0) { api_not_found(); return; }
+        if ($household_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $detail = $this->db->get_where('households', ['id' => $household_id])->row_array();
-        if (!$detail) { api_not_found(); return; }
+        if (!$detail) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $reason = trim((string)($in['reason'] ?? ''));
@@ -395,7 +420,9 @@ class Registrations extends MY_Controller
             }
 
             $this->db->trans_complete();
-            if ($this->db->trans_status() === false) throw new Exception('Transaksi gagal');
+            if ($this->db->trans_status() === false) {
+                throw new Exception('Transaksi gagal');
+            }
 
             api_ok(['ok' => true]);
 
@@ -407,17 +434,25 @@ class Registrations extends MY_Controller
 
     private function compute_status(array $claim_statuses): string
     {
-        $set = array_unique(array_map(fn($x) => strtolower((string)$x), $claim_statuses));
-        if (in_array('pending', $set, true)) return 'pending';
-        if (in_array('rejected', $set, true)) return 'rejected';
-        if (in_array('approved', $set, true)) return 'approved';
+        $set = array_unique(array_map(fn ($x) => strtolower((string)$x), $claim_statuses));
+        if (in_array('pending', $set, true)) {
+            return 'pending';
+        }
+        if (in_array('rejected', $set, true)) {
+            return 'rejected';
+        }
+        if (in_array('approved', $set, true)) {
+            return 'approved';
+        }
         return 'pending';
     }
 
     private function get_household_person_ids(int $household_id): array
     {
         $detail = $this->db->get_where('households', ['id' => $household_id])->row_array();
-        if (!$detail) return [];
+        if (!$detail) {
+            return [];
+        }
 
         $person_ids = $this->db
             ->select('person_id')
@@ -425,7 +460,7 @@ class Registrations extends MY_Controller
             ->where('household_id', $household_id)
             ->get()->result_array();
 
-        $ids = array_map(fn($x) => (int)$x['person_id'], $person_ids);
+        $ids = array_map(fn ($x) => (int)$x['person_id'], $person_ids);
         $ids[] = (int)$detail['head_person_id'];
         $ids = array_values(array_unique(array_filter($ids)));
 
@@ -434,7 +469,9 @@ class Registrations extends MY_Controller
 
     private function end_active_household_occupancies(int $household_id): void
     {
-        if ($household_id <= 0) return;
+        if ($household_id <= 0) {
+            return;
+        }
 
         $this->db
             ->where('household_id', $household_id)
@@ -447,7 +484,9 @@ class Registrations extends MY_Controller
 
     private function recompute_house_status(int $house_id): void
     {
-        if ($house_id <= 0) return;
+        if ($house_id <= 0) {
+            return;
+        }
 
         $occ = $this->db
             ->select('occupancy_type')

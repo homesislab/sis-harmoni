@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Posts extends MY_Controller
 {
@@ -13,8 +14,9 @@ class Posts extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'org' => $this->input->get('org') ? (string)$this->input->get('org') : null,
@@ -37,12 +39,17 @@ class Posts extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->PostModel->validate_payload($in, true);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->PostModel->create($in, (int)$this->auth_user['id']);
 
         $title = trim((string)($in['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menambahkan posting', 'Menambahkan posting "' . $title . '"');
 
         api_ok($this->PostModel->find_by_id($id), null, 201);
@@ -50,10 +57,16 @@ class Posts extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PostModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         if (!$this->has_permission('app.services.info.posts.manage') && $row['status'] !== 'published') {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
@@ -66,19 +79,30 @@ class Posts extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.posts.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PostModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $err = $this->PostModel->validate_payload($in, false);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $this->PostModel->update($id, $in);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Memperbarui posting', 'Memperbarui posting "' . $title . '"');
 
         api_ok($this->PostModel->find_by_id($id));
@@ -87,15 +111,23 @@ class Posts extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_any_permission(['app.services.info.posts.manage']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->PostModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->PostModel->delete($id);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menghapus posting', 'Menghapus posting "' . $title . '"');
 
         api_ok(null, ['message' => 'Post dihapus']);

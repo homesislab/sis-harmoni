@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class User_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class User_model extends MY_Model
 {
+    protected string $table_name = 'users';
+
     public function find_by_id(int $id): ?array
     {
         $row = $this->db
@@ -40,7 +43,9 @@ class User_model extends CI_Model
     public function is_email_taken(string $email, ?int $exclude_user_id = null): bool
     {
         $this->db->from('users')->where('email', $email);
-        if ($exclude_user_id) $this->db->where('id !=', $exclude_user_id);
+        if ($exclude_user_id) {
+            $this->db->where('id !=', $exclude_user_id);
+        }
         return (int)$this->db->count_all_results() > 0;
     }
 
@@ -53,19 +58,38 @@ class User_model extends CI_Model
         if (array_key_exists('password_hash', $in)) {
             $upd['password_hash'] = (string)$in['password_hash'];
         }
-        if (!$upd) return;
+        if (!$upd) {
+            return;
+        }
         $this->db->where('id', $user_id)->update('users', $upd);
     }
     public function get_me_payload(int $user_id, ?array $rbac = null): ?array
     {
         $user = $this->find_by_id($user_id);
-        if (!$user) return null;
+        if (!$user) {
+            return null;
+        }
 
         unset($user['password_hash']);
 
+        $role_codes = $rbac['roles'] ?? [];
+        $roles_out = $role_codes; // Fallback to raw string array
+
+        if (!empty($role_codes)) {
+            // Query translation mappings
+            $mapped_roles = $this->db->select('code, name')
+                ->from('roles')
+                ->where_in('code', $role_codes)
+                ->get()->result_array();
+                
+            if (!empty($mapped_roles)) {
+                $roles_out = $mapped_roles;
+            }
+        }
+
         return [
             'user' => $user,
-            'roles' => $rbac['roles'] ?? [],
+            'roles' => $roles_out,
             'permissions' => $rbac['permissions'] ?? [],
         ];
     }
@@ -78,7 +102,9 @@ class User_model extends CI_Model
             ->order_by('id', 'DESC')
             ->limit(1)
             ->get()->row_array();
-        if ($row) return (int)$row['id'];
+        if ($row) {
+            return (int)$row['id'];
+        }
 
         $row2 = $this->db->select('household_id')
             ->from('household_members')
@@ -103,17 +129,21 @@ class User_model extends CI_Model
         return $row ? (int)$row['house_id'] : null;
     }
 
-public function assign_role_code(int $user_id, string $role_code): void
+    public function assign_role_code(int $user_id, string $role_code): void
     {
         $role = $this->db->get_where('roles', ['code' => $role_code])->row_array();
-        if (!$role) return;
+        if (!$role) {
+            return;
+        }
 
         $exists = $this->db->get_where('user_roles', [
             'user_id' => $user_id,
             'role_id' => (int)$role['id'],
         ])->row_array();
 
-        if ($exists) return;
+        if ($exists) {
+            return;
+        }
 
         $this->db->insert('user_roles', [
             'user_id' => $user_id,

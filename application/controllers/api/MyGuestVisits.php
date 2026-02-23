@@ -1,7 +1,8 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class GuestVisits extends MY_Controller
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class MyGuestVisits extends MY_Controller
 {
     public function __construct()
     {
@@ -13,8 +14,9 @@ class GuestVisits extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'q' => $this->get_q(),
@@ -38,7 +40,7 @@ class GuestVisits extends MY_Controller
                 ->get()
                 ->result_array();
 
-            $house_ids = array_values(array_filter(array_map(function($r){
+            $house_ids = array_values(array_filter(array_map(function ($r) {
                 return (int)($r['house_id'] ?? 0);
             }, $rows)));
 

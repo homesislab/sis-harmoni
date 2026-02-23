@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Users extends MY_Controller
 {
@@ -10,15 +11,16 @@ class Users extends MY_Controller
         $this->require_auth();
         $this->require_permission('app.services.settings.users.manage');
 
-        $this->load->model('User_model','UserModel');
+        $this->load->model('User_model', 'UserModel');
         $this->load->library('Rbac');
     }
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
-        $q = trim((string)($this->input->get('q') ?? ''));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
+        $q    = $this->get_search_query();
 
         $offset = ($page - 1) * $per;
 
@@ -32,7 +34,7 @@ class Users extends MY_Controller
         $total = (int)$qb->count_all_results('', false);
 
         $items = $qb->select('u.id,u.person_id,u.username,u.email,u.status,u.created_at,u.updated_at')
-            ->order_by('u.id','DESC')
+            ->order_by('u.id', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();
 
@@ -57,9 +59,16 @@ class Users extends MY_Controller
         $status = $in['status'] ?? 'active';
 
         $err = [];
-        if ($username === '') $err['username']='Wajib diisi';
-        if (strlen($password) < 6) $err['password']='Minimal 6 karakter';
-        if ($err) { api_validation_error($err); return; }
+        if ($username === '') {
+            $err['username'] = 'Wajib diisi';
+        }
+        if (strlen($password) < 6) {
+            $err['password'] = 'Minimal 6 karakter';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         if ($this->UserModel->find_by_username($username)) {
             api_conflict('Username sudah digunakan');
@@ -84,32 +93,46 @@ class Users extends MY_Controller
         api_ok($user, null, 201);
     }
 
-    public function show(int $id=0): void
+    public function show(int $id = 0): void
     {
-        if ($id<=0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $user = $this->UserModel->find_by_id($id);
-        if (!$user) { api_not_found(); return; }
+        if (!$user) {
+            api_not_found();
+            return;
+        }
         unset($user['password_hash']);
         $rbac = $this->rbac->load_for_user($id);
         api_ok(['user' => $user, 'roles' => $rbac['roles'] ?? [], 'permissions' => $rbac['permissions'] ?? []]);
     }
 
-    public function update(int $id=0): void
+    public function update(int $id = 0): void
     {
-        if ($id<=0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $user = $this->UserModel->find_by_id($id);
-        if (!$user) { api_not_found(); return; }
+        if (!$user) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $upd = [];
         foreach (['email','status','person_id'] as $f) {
-            if (array_key_exists($f, $in)) $upd[$f] = $in[$f];
+            if (array_key_exists($f, $in)) {
+                $upd[$f] = $in[$f];
+            }
         }
-        if (isset($in['password']) && strlen((string)$in['password'])>=6) {
+        if (isset($in['password']) && strlen((string)$in['password']) >= 6) {
             $upd['password_hash'] = password_hash((string)$in['password'], PASSWORD_BCRYPT);
         }
         if ($upd) {
-            $this->db->where('id',$id)->update('users', $upd);
+            $this->db->where('id', $id)->update('users', $upd);
         }
 
         $fresh = $this->UserModel->find_by_id($id);
@@ -117,22 +140,31 @@ class Users extends MY_Controller
         api_ok($fresh);
     }
 
-    public function roles(int $id=0): void
+    public function roles(int $id = 0): void
     {
-        if ($id<=0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $user = $this->UserModel->find_by_id($id);
-        if (!$user) { api_not_found(); return; }
+        if (!$user) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $role_codes = $in['role_codes'] ?? [];
-        if (!is_array($role_codes)) { api_validation_error(['role_codes'=>'Harus array']); return; }
+        if (!is_array($role_codes)) {
+            api_validation_error(['role_codes' => 'Harus array']);
+            return;
+        }
 
-        $this->db->where('user_id',$id)->delete('user_roles');
+        $this->db->where('user_id', $id)->delete('user_roles');
         foreach ($role_codes as $rc) {
             $this->UserModel->assign_role_code($id, (string)$rc);
         }
 
         $rbac = $this->rbac->load_for_user($id);
-        api_ok(['user_id'=>$id,'roles'=>$rbac['roles'] ?? []]);
+        api_ok(['user_id' => $id,'roles' => $rbac['roles'] ?? []]);
     }
 }

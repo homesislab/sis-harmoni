@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Billing extends MY_Controller
 {
@@ -9,8 +10,8 @@ class Billing extends MY_Controller
         $this->as_api();
         $this->require_auth();
 
-        $this->load->model('Invoice_model','InvoiceModel');
-        $this->load->model('Charge_model','ChargeModel');
+        $this->load->model('Invoice_model', 'InvoiceModel');
+        $this->load->model('Charge_model', 'ChargeModel');
     }
 
     public function generate(): void
@@ -24,11 +25,20 @@ class Billing extends MY_Controller
 
         $dry_run = (int)($in['dry_run'] ?? 0) === 1;
 
-        if ($charge_type_id <= 0) { api_validation_error(['charge_type_id' => 'Wajib']); return; }
-        if ($period === '') { api_validation_error(['period' => 'Wajib (YYYY-MM)']); return; }
+        if ($charge_type_id <= 0) {
+            api_validation_error(['charge_type_id' => 'Wajib']);
+            return;
+        }
+        if ($period === '') {
+            api_validation_error(['period' => 'Wajib (YYYY-MM)']);
+            return;
+        }
 
         $ct = $this->ChargeModel->find_type($charge_type_id);
-        if (!$ct) { api_not_found('Charge type tidak ditemukan'); return; }
+        if (!$ct) {
+            api_not_found('Charge type tidak ditemukan');
+            return;
+        }
 
         $default_amount = $override_amount !== null
             ? $override_amount
@@ -49,11 +59,15 @@ class Billing extends MY_Controller
         $household_ids = [];
         foreach ($rows as $r) {
             $hid = (int)($r['house_id'] ?? 0);
-            if ($hid <= 0 || isset($seen_house[$hid])) continue;
+            if ($hid <= 0 || isset($seen_house[$hid])) {
+                continue;
+            }
             $seen_house[$hid] = true;
 
             $hhid = (int)($r['household_id'] ?? 0);
-            if ($hhid > 0) $household_ids[$hhid] = true;
+            if ($hhid > 0) {
+                $household_ids[$hhid] = true;
+            }
         }
         $household_ids = array_keys($household_ids);
 
@@ -63,7 +77,10 @@ class Billing extends MY_Controller
 
         foreach ($household_ids as $hhid) {
             $exists = $this->InvoiceModel->find_by_household_charge_period($hhid, $charge_type_id, $period);
-            if ($exists) { $skipped++; continue; }
+            if ($exists) {
+                $skipped++;
+                continue;
+            }
 
             if ($dry_run) {
                 $created++;

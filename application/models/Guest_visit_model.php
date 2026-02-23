@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Guest_visit_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Guest_visit_model extends MY_Model
 {
+    protected string $table_name = 'guest_visits';
+
     private string $table = 'guest_visits';
 
     public function create(array $data): int
@@ -45,7 +48,9 @@ class Guest_visit_model extends CI_Model
 
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k, $data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
 
         if ($upd) {
@@ -59,8 +64,8 @@ class Guest_visit_model extends CI_Model
         $row = $this->db
             ->select('gv.*, h.code as house_code, p.full_name as host_name')
             ->from('guest_visits gv')
-            ->join('houses h','h.id=gv.house_id','left')
-            ->join('persons p','p.id=gv.host_person_id','left')
+            ->join('houses h', 'h.id=gv.house_id', 'left')
+            ->join('persons p', 'p.id=gv.host_person_id', 'left')
             ->where('gv.id', $id)
             ->get()->row_array();
 
@@ -76,17 +81,25 @@ class Guest_visit_model extends CI_Model
         $qb = $this->db
             ->select('gv.*, h.code as house_code, p.full_name as host_name')
             ->from('guest_visits gv')
-            ->join('houses h','h.id=gv.house_id','left')
-            ->join('persons p','p.id=gv.host_person_id','left');
+            ->join('houses h', 'h.id=gv.house_id', 'left')
+            ->join('persons p', 'p.id=gv.host_person_id', 'left');
 
         if (!empty($filters['house_ids']) && is_array($filters['house_ids'])) {
             $ids = array_values(array_filter(array_map('intval', $filters['house_ids'])));
-            if ($ids) $qb->where_in('gv.house_id', $ids);
+            if ($ids) {
+                $qb->where_in('gv.house_id', $ids);
+            }
         }
 
-        if (!empty($filters['created_by'])) $qb->where('gv.created_by', (int)$filters['created_by']);
-        if (!empty($filters['status'])) $qb->where('gv.status', (string)$filters['status']);
-        if (!empty($filters['destination_type'])) $qb->where('gv.destination_type', (string)$filters['destination_type']);
+        if (!empty($filters['created_by'])) {
+            $qb->where('gv.created_by', (int)$filters['created_by']);
+        }
+        if (!empty($filters['status'])) {
+            $qb->where('gv.status', (string)$filters['status']);
+        }
+        if (!empty($filters['destination_type'])) {
+            $qb->where('gv.destination_type', (string)$filters['destination_type']);
+        }
 
         if (!empty($filters['q'])) {
             $kw = trim((string)$filters['q']);
@@ -105,7 +118,7 @@ class Guest_visit_model extends CI_Model
         }
 
         $total = (int)$qb->count_all_results('', false);
-        $items = $qb->order_by('gv.id','DESC')->limit($per, $offset)->get()->result_array();
+        $items = $qb->order_by('gv.id', 'DESC')->limit($per, $offset)->get()->result_array();
         $total_pages = ($per > 0 ? (int)ceil($total / $per) : 0);
 
         return [

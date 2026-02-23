@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Businesses extends MY_Controller
 {
@@ -14,8 +15,9 @@ class Businesses extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $pid = (int)($this->auth_user['person_id'] ?? 0);
 
@@ -31,8 +33,11 @@ class Businesses extends MY_Controller
         ];
 
         $is_lapak_q = $this->input->get('is_lapak');
-        if ($is_lapak_q !== null && $is_lapak_q !== '') $filters['is_lapak'] = (int)$is_lapak_q;
-        else $filters['is_lapak'] = null;
+        if ($is_lapak_q !== null && $is_lapak_q !== '') {
+            $filters['is_lapak'] = (int)$is_lapak_q;
+        } else {
+            $filters['is_lapak'] = null;
+        }
 
         if ($can_review) {
             $filters['status'] = $this->input->get('status') ? (string)$this->input->get('status') : null;
@@ -57,15 +62,26 @@ class Businesses extends MY_Controller
         $this->require_any_permission(['app.profile.family.umkm', 'app.services.requests.businesses.review']);
         $in = $this->json_input();
         $err = [];
-        if (empty($in['name'])) $err['name'] = 'Wajib diisi';
-        if (empty($in['category'])) $err['category'] = 'Wajib diisi';
-        if ($err) { api_validation_error($err); return; }
+        if (empty($in['name'])) {
+            $err['name'] = 'Wajib diisi';
+        }
+        if (empty($in['category'])) {
+            $err['category'] = 'Wajib diisi';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $payload = $in;
         $payload['created_by'] = (int)$this->auth_user['id'];
         $payload['owner_person_id'] = (int)($this->auth_user['person_id'] ?? 0) ?: null;
-        if (empty($payload['house_id']) && !empty($this->auth_house_id)) $payload['house_id'] = (int)$this->auth_house_id;
-        if (!$this->has_permission('app.services.requests.businesses.review')) $payload['status'] = 'pending';
+        if (empty($payload['house_id']) && !empty($this->auth_house_id)) {
+            $payload['house_id'] = (int)$this->auth_house_id;
+        }
+        if (!$this->has_permission('app.services.requests.businesses.review')) {
+            $payload['status'] = 'pending';
+        }
 
         $id = $this->BusinessModel->create($payload);
         api_ok($this->BusinessModel->find_by_id($id), null, 201);
@@ -74,10 +90,16 @@ class Businesses extends MY_Controller
     public function show(int $id = 0): void
     {
         $this->require_any_permission(['app.services.resident.umkm.view', 'app.profile.family.umkm', 'app.services.requests.businesses.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $biz = $this->BusinessModel->find_by_id($id);
-        if (!$biz) { api_not_found(); return; }
+        if (!$biz) {
+            api_not_found();
+            return;
+        }
 
         $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -97,9 +119,15 @@ class Businesses extends MY_Controller
     public function update(int $id = 0): void
     {
         $this->require_any_permission(['app.profile.family.umkm', 'app.services.requests.businesses.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->BusinessModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -116,9 +144,15 @@ class Businesses extends MY_Controller
     public function approve(int $id = 0): void
     {
         $this->require_any_permission(['app.services.requests.businesses.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->BusinessModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->BusinessModel->update($id, [
             'status' => 'active',
@@ -132,9 +166,15 @@ class Businesses extends MY_Controller
     public function reject(int $id = 0): void
     {
         $this->require_any_permission(['app.services.requests.businesses.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->BusinessModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $reason = trim((string)($in['reason'] ?? ''));
@@ -155,9 +195,15 @@ class Businesses extends MY_Controller
     public function resubmit(int $id = 0): void
     {
         $this->require_any_permission(['app.profile.family.umkm']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->BusinessModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $pid = (int)($this->auth_user['person_id'] ?? 0);
         if ((int)($row['owner_person_id'] ?? 0) !== $pid) {
@@ -183,9 +229,15 @@ class Businesses extends MY_Controller
     public function products(int $id = 0): void
     {
         $this->require_any_permission(['app.services.resident.umkm.view', 'app.profile.family.umkm', 'app.services.requests.businesses.review']);
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $biz = $this->BusinessModel->find_by_id($id);
-        if (!$biz) { api_not_found(); return; }
+        if (!$biz) {
+            api_not_found();
+            return;
+        }
 
         $can_review = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -198,6 +250,6 @@ class Businesses extends MY_Controller
 
         $status = (!$can_review && !$is_owner) ? 'active' : null; // null = all
         $items = $this->ProductModel->list_by_business($id, $status);
-        api_ok(['items'=>$items]);
+        api_ok(['items' => $items]);
     }
 }

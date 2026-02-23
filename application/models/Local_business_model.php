@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Local_business_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Local_business_model extends MY_Model
 {
+    protected string $table_name = 'local_businesses';
+
     private string $table = 'local_businesses';
 
     public function find_by_id(int $id): ?array
@@ -48,7 +51,9 @@ class Local_business_model extends CI_Model
 
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k, $data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
 
         if ($upd) {

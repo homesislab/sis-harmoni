@@ -1,34 +1,47 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class House_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class House_model extends MY_Model
 {
+    protected string $table_name = 'houses';
+
     public function update_status_type(int $house_id, ?string $type = null, ?string $status = null): void
     {
         $upd = [];
-        if ($type !== null) $upd['type'] = $type;
-        if ($status !== null) $upd['status'] = $status;
-        if (!$upd) return;
-        $this->db->where('id',$house_id)->update('houses',$upd);
+        if ($type !== null) {
+            $upd['type'] = $type;
+        }
+        if ($status !== null) {
+            $upd['status'] = $status;
+        }
+        if (!$upd) {
+            return;
+        }
+        $this->db->where('id', $house_id)->update('houses', $upd);
     }
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where('houses', ['id'=>$id])->row_array();
+        $row = $this->db->get_where('houses', ['id' => $id])->row_array();
         return $row ?: null;
     }
 
     public function exists_code(string $code, int $exclude_id = 0): bool
     {
         $this->db->from('houses')->where('code', $code);
-        if ($exclude_id > 0) $this->db->where('id !=', $exclude_id);
+        if ($exclude_id > 0) {
+            $this->db->where('id !=', $exclude_id);
+        }
         return (int)$this->db->count_all_results() > 0;
     }
 
     public function exists_block_number(string $block, string $number, int $exclude_id = 0): bool
     {
         $this->db->from('houses')->where('block', $block)->where('number', $number);
-        if ($exclude_id > 0) $this->db->where('id !=', $exclude_id);
+        if ($exclude_id > 0) {
+            $this->db->where('id !=', $exclude_id);
+        }
         return (int)$this->db->count_all_results() > 0;
     }
 
@@ -43,16 +56,32 @@ class House_model extends CI_Model
         $status = isset($in['status']) ? (string)$in['status'] : null;
 
         if ($is_create) {
-            if ($block === null || $block === '') $err['block'] = 'Wajib diisi';
-            if ($number === null || $number === '') $err['number'] = 'Wajib diisi';
-            if ($code === null || $code === '') $err['code'] = 'Wajib diisi';
-            if ($type === null || $type === '') $err['type'] = 'Wajib diisi';
-            if ($status === null || $status === '') $err['status'] = 'Wajib diisi';
+            if ($block === null || $block === '') {
+                $err['block'] = 'Wajib diisi';
+            }
+            if ($number === null || $number === '') {
+                $err['number'] = 'Wajib diisi';
+            }
+            if ($code === null || $code === '') {
+                $err['code'] = 'Wajib diisi';
+            }
+            if ($type === null || $type === '') {
+                $err['type'] = 'Wajib diisi';
+            }
+            if ($status === null || $status === '') {
+                $err['status'] = 'Wajib diisi';
+            }
         }
 
-        if ($block !== null && $block !== '' && strlen($block) > 10) $err['block'] = 'Maks 10 karakter';
-        if ($number !== null && $number !== '' && strlen($number) > 10) $err['number'] = 'Maks 10 karakter';
-        if ($code !== null && $code !== '' && strlen($code) > 30) $err['code'] = 'Maks 30 karakter';
+        if ($block !== null && $block !== '' && strlen($block) > 10) {
+            $err['block'] = 'Maks 10 karakter';
+        }
+        if ($number !== null && $number !== '' && strlen($number) > 10) {
+            $err['number'] = 'Maks 10 karakter';
+        }
+        if ($code !== null && $code !== '' && strlen($code) > 30) {
+            $err['code'] = 'Maks 30 karakter';
+        }
 
         if ($type !== null && $type !== '' && !in_array($type, ['house','kavling'], true)) {
             $err['type'] = 'Harus house|kavling';
@@ -87,7 +116,9 @@ class House_model extends CI_Model
                 $data[$k] = $val;
             }
         }
-        if (!$data) return;
+        if (!$data) {
+            return;
+        }
         $this->db->where('id', $id)->update('houses', $data);
     }
 
@@ -167,8 +198,12 @@ class House_model extends CI_Model
                 ->group_end();
         }
 
-        if ($status !== '') $qb->where('h.status', $status);
-        if ($type !== '') $qb->where('h.type', $type);
+        if ($status !== '') {
+            $qb->where('h.status', $status);
+        }
+        if ($type !== '') {
+            $qb->where('h.type', $type);
+        }
 
         if ($status_group === 'inhabited' && $status === '') {
             $qb->where_in('h.status', ['occupied', 'rented', 'owned']);
@@ -220,8 +255,12 @@ class House_model extends CI_Model
                 ->group_end();
         }
 
-        if ($status !== '') $qb->where('h.status', $status);
-        if ($type !== '') $qb->where('h.type', $type);
+        if ($status !== '') {
+            $qb->where('h.status', $status);
+        }
+        if ($type !== '') {
+            $qb->where('h.type', $type);
+        }
 
         if ($status_group === 'inhabited' && $status === '') {
             $qb->where_in('h.status', ['occupied', 'rented', 'owned']);
@@ -239,11 +278,11 @@ class House_model extends CI_Model
         return [
             'items' => $items,
             'meta' => [
-                'page'=>$page,
-                'per_page'=>$per,
-                'total'=>$total,
-                'total_pages'=>($per > 0 ? (int)ceil($total / $per) : 0),
-                'has_next'=>($page < ($per > 0 ? (int)ceil($total / $per) : 0)),
+                'page' => $page,
+                'per_page' => $per,
+                'total' => $total,
+                'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
+                'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),
             ],
         ];
     }

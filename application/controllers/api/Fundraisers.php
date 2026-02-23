@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Fundraisers extends MY_Controller
 {
@@ -17,8 +18,9 @@ class Fundraisers extends MY_Controller
 
     public function index(): void
     {
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
 
@@ -41,12 +43,17 @@ class Fundraisers extends MY_Controller
 
         $in = $this->json_input();
         $err = $this->FundraiserModel->validate_payload($in, true);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->FundraiserModel->create($in);
 
         $title = trim((string)($in['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Membuat program donasi', 'Membuat program donasi "' . $title . '"');
 
         api_ok($this->FundraiserModel->find_by_id($id), null, 201);
@@ -54,28 +61,45 @@ class Fundraisers extends MY_Controller
 
     public function show(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->FundraiserModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
         api_ok($row);
     }
 
     public function update(int $id = 0): void
     {
         $this->require_permission('app.services.finance.donation_campaigns.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->FundraiserModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $err = $this->FundraiserModel->validate_payload($in, false);
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $this->FundraiserModel->update($id, $in);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Memperbarui program donasi', 'Memperbarui program donasi "' . $title . '"');
 
         api_ok($this->FundraiserModel->find_by_id($id));
@@ -84,10 +108,16 @@ class Fundraisers extends MY_Controller
     public function destroy(int $id = 0): void
     {
         $this->require_permission('app.services.finance.donation_campaigns.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->FundraiserModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $approved = $this->DonationModel->count_approved_for_fundraiser($id);
         if ($approved > 0) {
@@ -98,7 +128,9 @@ class Fundraisers extends MY_Controller
         $this->FundraiserModel->delete($id);
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menghapus program donasi', 'Menghapus program donasi "' . $title . '"');
 
         api_ok(null, ['message' => 'Fundraiser dihapus']);
@@ -107,15 +139,23 @@ class Fundraisers extends MY_Controller
     public function close(int $id = 0): void
     {
         $this->require_permission('app.services.finance.donation_campaigns.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $row = $this->FundraiserModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->FundraiserModel->set_status($id, 'closed');
 
         $title = trim((string)($row['title'] ?? ''));
-        if ($title === '') $title = 'Tanpa judul';
+        if ($title === '') {
+            $title = 'Tanpa judul';
+        }
         audit_log($this, 'Menutup program donasi', 'Menutup program donasi "' . $title . '"');
 
         api_ok(null, ['message' => 'Fundraiser ditutup']);
@@ -123,11 +163,20 @@ class Fundraisers extends MY_Controller
 
     public function donate(int $fundraiser_id = 0): void
     {
-        if ($fundraiser_id <= 0) { api_not_found(); return; }
+        if ($fundraiser_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $fund = $this->FundraiserModel->find_by_id($fundraiser_id);
-        if (!$fund) { api_not_found('Fundraiser tidak ditemukan'); return; }
-        if ($fund['status'] !== 'active') { api_error('FORBIDDEN','Fundraiser sudah ditutup',403); return; }
+        if (!$fund) {
+            api_not_found('Fundraiser tidak ditemukan');
+            return;
+        }
+        if ($fund['status'] !== 'active') {
+            api_error('FORBIDDEN', 'Fundraiser sudah ditutup', 403);
+            return;
+        }
 
         $in = $this->json_input();
 
@@ -140,18 +189,33 @@ class Fundraisers extends MY_Controller
         $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
 
         $person_id = null;
-        if ($can_manage && isset($in['person_id'])) $person_id = (int)$in['person_id'];
-        if (!$person_id) $person_id = !empty($this->auth_user['person_id']) ? (int)$this->auth_user['person_id'] : 0;
+        if ($can_manage && isset($in['person_id'])) {
+            $person_id = (int)$in['person_id'];
+        }
+        if (!$person_id) {
+            $person_id = !empty($this->auth_user['person_id']) ? (int)$this->auth_user['person_id'] : 0;
+        }
 
         $err = [];
-        if ($person_id <= 0) $err['person_id'] = 'Akun belum terhubung ke data warga (person_id)';
-        if ($amount <= 0) $err['amount'] = 'Harus > 0';
-        if ($paid_at === '' || !preg_match('/^\d{4}\-\d{2}\-\d{2}\s\d{2}\:\d{2}\:\d{2}$/', $paid_at)) $err['paid_at'] = 'Format YYYY-MM-DD HH:MM:SS';
+        if ($person_id <= 0) {
+            $err['person_id'] = 'Akun belum terhubung ke data warga (person_id)';
+        }
+        if ($amount <= 0) {
+            $err['amount'] = 'Harus > 0';
+        }
+        if ($paid_at === '' || !preg_match('/^\d{4}\-\d{2}\-\d{2}\s\d{2}\:\d{2}\:\d{2}$/', $paid_at)) {
+            $err['paid_at'] = 'Format YYYY-MM-DD HH:MM:SS';
+        }
 
         $proof_err = validate_proof_url($this, $proof);
-        if ($proof_err) $err['proof_file_url'] = $proof_err;
+        if ($proof_err) {
+            $err['proof_file_url'] = $proof_err;
+        }
 
-        if ($err) { api_validation_error($err); return; }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $id = $this->DonationModel->create([
             'fundraiser_id' => $fundraiser_id,
@@ -165,7 +229,9 @@ class Fundraisers extends MY_Controller
 
         $don = $this->DonationModel->find_by_id($id);
         $fundTitle = trim((string)($fund['title'] ?? ($don['fundraiser_title'] ?? '')));
-        if ($fundTitle === '') $fundTitle = 'Program donasi';
+        if ($fundTitle === '') {
+            $fundTitle = 'Program donasi';
+        }
         $amt = number_format((float)($don['amount'] ?? $amount), 0, ',', '.');
         audit_log($this, 'Mengirim donasi', 'Mengirim donasi Rp ' . $amt . ' untuk "' . $fundTitle . '"');
 
@@ -174,13 +240,20 @@ class Fundraisers extends MY_Controller
 
     public function donations(int $fundraiser_id = 0): void
     {
-        if ($fundraiser_id <= 0) { api_not_found(); return; }
+        if ($fundraiser_id <= 0) {
+            api_not_found();
+            return;
+        }
 
         $fund = $this->FundraiserModel->find_by_id($fundraiser_id);
-        if (!$fund) { api_not_found('Fundraiser tidak ditemukan'); return; }
+        if (!$fund) {
+            api_not_found('Fundraiser tidak ditemukan');
+            return;
+        }
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
         $status = $this->input->get('status') ? (string)$this->input->get('status') : null;

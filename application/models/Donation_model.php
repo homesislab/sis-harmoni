@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Donation_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Donation_model extends MY_Model
 {
+    protected string $table_name = 'fundraiser_donations';
+
     private function join_unit_admin($qb)
     {
         $occSub = "

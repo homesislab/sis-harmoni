@@ -1,14 +1,19 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Feedback_response_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Feedback_response_model extends MY_Model
 {
+    protected string $table_name = 'feedback_responses';
+
     private string $table = 'feedback_responses';
 
     public function list_for_feedback(int $feedback_id, bool $include_internal = false): array
     {
-        $qb = $this->db->from($this->table)->where('feedback_id', $feedback_id)->order_by('id','ASC');
-        if (!$include_internal) $qb->where('is_public', 1);
+        $qb = $this->db->from($this->table)->where('feedback_id', $feedback_id)->order_by('id', 'ASC');
+        if (!$include_internal) {
+            $qb->where('is_public', 1);
+        }
         return $qb->get()->result_array();
     }
 

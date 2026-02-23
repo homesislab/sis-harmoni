@@ -1,8 +1,11 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Inventory_log_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Inventory_log_model extends MY_Model
 {
+    protected string $table_name = 'inventory_logs';
+
     private string $table = 'inventory_logs';
 
     public function create(array $data): int

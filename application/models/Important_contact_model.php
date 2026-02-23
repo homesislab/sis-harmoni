@@ -1,13 +1,16 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Important_contact_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Important_contact_model extends MY_Model
 {
+    protected string $table_name = 'important_contacts';
+
     private string $table = 'important_contacts';
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where($this->table, ['id'=>$id])->row_array();
+        $row = $this->db->get_where($this->table, ['id' => $id])->row_array();
         return $row ?: null;
     }
 
@@ -34,17 +37,19 @@ class Important_contact_model extends CI_Model
         $allowed = ['name','category','phone','whatsapp','description','is_public','sort_order'];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k,$data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
         if ($upd) {
             $upd['updated_at'] = date('Y-m-d H:i:s');
-            $this->db->where('id',$id)->update($this->table,$upd);
+            $this->db->where('id', $id)->update($this->table, $upd);
         }
     }
 
     public function delete(int $id): void
     {
-        $this->db->where('id',$id)->delete($this->table);
+        $this->db->where('id', $id)->delete($this->table);
     }
 
     private function apply_filters(array $filters = []): void

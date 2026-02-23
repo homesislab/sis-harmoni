@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Emergencies extends MY_Controller
 {
@@ -15,8 +16,9 @@ class Emergencies extends MY_Controller
     {
         $this->require_permission('app.services.security.emergencies.manage');
 
-        $page = max(1, (int)$this->input->get('page'));
-        $per  = min(100, max(1, (int)$this->input->get('per_page') ?: 20));
+        $p = $this->get_pagination_params();
+        $page = $p['page'];
+        $per  = $p['per_page'];
 
         $filters = [
             'q' => $this->_get_q(),
@@ -25,7 +27,7 @@ class Emergencies extends MY_Controller
         ];
 
         $res = $this->EmergencyModel->paginate($page, $per, $filters);
-        api_ok(['items'=>$res['items']], $res['meta']);
+        api_ok(['items' => $res['items']], $res['meta']);
     }
 
     public function store(): void
@@ -42,7 +44,9 @@ class Emergencies extends MY_Controller
         $payload['type'] = $type;
         $payload['created_by'] = (int)$this->auth_user['id'];
         $payload['reporter_person_id'] = (int)($this->auth_user['person_id'] ?? 0) ?: null;
-        if (empty($payload['house_id']) && !empty($this->auth_house_id)) $payload['house_id'] = (int)$this->auth_house_id;
+        if (empty($payload['house_id']) && !empty($this->auth_house_id)) {
+            $payload['house_id'] = (int)$this->auth_house_id;
+        }
 
         $id = $this->EmergencyModel->create($payload);
         api_ok($this->EmergencyModel->find_by_id($id), null, 201);
@@ -51,9 +55,15 @@ class Emergencies extends MY_Controller
     public function acknowledge(int $id = 0): void
     {
         $this->require_permission('app.services.security.emergencies.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->EmergencyModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $this->EmergencyModel->update($id, [
             'status' => 'acknowledged',
@@ -66,9 +76,15 @@ class Emergencies extends MY_Controller
     public function resolve(int $id = 0): void
     {
         $this->require_permission('app.services.security.emergencies.manage');
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->EmergencyModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $in = $this->json_input();
         $this->EmergencyModel->update($id, [
@@ -82,9 +98,15 @@ class Emergencies extends MY_Controller
 
     public function cancel(int $id = 0): void
     {
-        if ($id <= 0) { api_not_found(); return; }
+        if ($id <= 0) {
+            api_not_found();
+            return;
+        }
         $row = $this->EmergencyModel->find_by_id($id);
-        if (!$row) { api_not_found(); return; }
+        if (!$row) {
+            api_not_found();
+            return;
+        }
 
         $can_manage = $this->has_permission('app.services.security.emergencies.manage');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
@@ -93,7 +115,7 @@ class Emergencies extends MY_Controller
             return;
         }
 
-        $this->EmergencyModel->update($id, ['status'=>'cancelled']);
+        $this->EmergencyModel->update($id, ['status' => 'cancelled']);
         api_ok($this->EmergencyModel->find_by_id($id));
     }
 

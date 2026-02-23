@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 class Uploads extends MY_Controller
 {
@@ -51,7 +52,9 @@ class Uploads extends MY_Controller
 
         $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : null;
         $mime = $finfo ? finfo_file($finfo, $file['tmp_name']) : null;
-        if ($finfo) finfo_close($finfo);
+        if ($finfo) {
+            finfo_close($finfo);
+        }
 
         $allowedMime = ['image/jpeg', 'image/png', 'image/webp'];
         if ($mime && !in_array($mime, $allowedMime, true)) {

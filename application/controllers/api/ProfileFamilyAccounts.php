@@ -1,5 +1,6 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
+
+defined('BASEPATH') or exit('No direct script access allowed');
 
 /**
  * Profile: Family Accounts
@@ -44,7 +45,9 @@ class ProfileFamilyAccounts extends MY_Controller
         $personIds = [];
         foreach ((array)$members as $m) {
             $pid = (int)($m['id'] ?? 0);
-            if ($pid > 0) $personIds[] = $pid;
+            if ($pid > 0) {
+                $personIds[] = $pid;
+            }
         }
         $personIds = array_values(array_unique($personIds));
 
@@ -88,10 +91,19 @@ class ProfileFamilyAccounts extends MY_Controller
         $password = (string)($in['password'] ?? '');
 
         $err = [];
-        if ($target_person_id <= 0) $err['person_id'] = 'Wajib diisi';
-        if ($username === '') $err['username'] = 'Wajib diisi';
-        if (strlen($password) < 6) $err['password'] = 'Minimal 6 karakter';
-        if ($err) { api_validation_error($err); return; }
+        if ($target_person_id <= 0) {
+            $err['person_id'] = 'Wajib diisi';
+        }
+        if ($username === '') {
+            $err['username'] = 'Wajib diisi';
+        }
+        if (strlen($password) < 6) {
+            $err['password'] = 'Minimal 6 karakter';
+        }
+        if ($err) {
+            api_validation_error($err);
+            return;
+        }
 
         $me_person_id = (int)$this->auth_user['person_id'];
         $household_id = $this->UserModel->resolve_household_id_by_person($me_person_id);
@@ -138,24 +150,39 @@ class ProfileFamilyAccounts extends MY_Controller
 
     public function update(int $user_id = 0): void
     {
-        if ($user_id <= 0) { api_not_found(); return; }
+        if ($user_id <= 0) {
+            api_not_found();
+            return;
+        }
         if (empty($this->auth_user['person_id'])) {
             api_error('FORBIDDEN', 'Akun tidak terhubung ke data warga', 403);
             return;
         }
 
         $u = $this->db->get_where('users', ['id' => $user_id])->row_array();
-        if (!$u) { api_not_found(); return; }
+        if (!$u) {
+            api_not_found();
+            return;
+        }
         $target_person_id = (int)($u['person_id'] ?? 0);
-        if ($target_person_id <= 0) { api_error('FORBIDDEN', 'Akun belum terhubung ke data warga', 403); return; }
+        if ($target_person_id <= 0) {
+            api_error('FORBIDDEN', 'Akun belum terhubung ke data warga', 403);
+            return;
+        }
 
         $me_person_id = (int)$this->auth_user['person_id'];
         $household_id = $this->UserModel->resolve_household_id_by_person($me_person_id);
-        if (!$household_id) { api_error('FORBIDDEN', 'KK tidak ditemukan', 403); return; }
+        if (!$household_id) {
+            api_error('FORBIDDEN', 'KK tidak ditemukan', 403);
+            return;
+        }
 
         $allowed = $this->HouseholdModel->person_is_member($target_person_id, (int)$household_id)
             || ((int)($this->db->select('head_person_id')->from('households')->where('id', (int)$household_id)->get()->row_array()['head_person_id'] ?? 0) === $target_person_id);
-        if (!$allowed) { api_error('FORBIDDEN', 'Akses ditolak', 403); return; }
+        if (!$allowed) {
+            api_error('FORBIDDEN', 'Akses ditolak', 403);
+            return;
+        }
 
         $in = $this->json_input();
         $upd = [];
@@ -163,7 +190,10 @@ class ProfileFamilyAccounts extends MY_Controller
         if (isset($in['password'])) {
             $p = trim((string)$in['password']);
             if ($p !== '') {
-                if (strlen($p) < 6) { api_validation_error(['password' => 'Minimal 6 karakter']); return; }
+                if (strlen($p) < 6) {
+                    api_validation_error(['password' => 'Minimal 6 karakter']);
+                    return;
+                }
                 $upd['password_hash'] = password_hash($p, PASSWORD_BCRYPT);
             }
         }

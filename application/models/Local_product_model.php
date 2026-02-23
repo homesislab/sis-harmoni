@@ -1,20 +1,25 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class Local_product_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class Local_product_model extends MY_Model
 {
+    protected string $table_name = 'local_products';
+
     private string $table = 'local_products';
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where($this->table, ['id'=>$id])->row_array();
+        $row = $this->db->get_where($this->table, ['id' => $id])->row_array();
         return $row ?: null;
     }
 
     public function list_by_business(int $business_id, ?string $status = 'active'): array
     {
-        $qb = $this->db->from($this->table)->where('business_id', $business_id)->order_by('id','DESC');
-        if ($status) $qb->where('status', $status);
+        $qb = $this->db->from($this->table)->where('business_id', $business_id)->order_by('id', 'DESC');
+        if ($status) {
+            $qb->where('status', $status);
+        }
         return $qb->get()->result_array();
     }
 
@@ -78,13 +83,17 @@ class Local_product_model extends CI_Model
         $allowed = ['name','description','price','unit','image_url','status'];
         $upd = [];
         foreach ($allowed as $k) {
-            if (array_key_exists($k,$data)) $upd[$k] = $data[$k];
+            if (array_key_exists($k, $data)) {
+                $upd[$k] = $data[$k];
+            }
         }
-        if ($upd) $this->db->where('id',$id)->update($this->table,$upd);
+        if ($upd) {
+            $this->db->where('id', $id)->update($this->table, $upd);
+        }
     }
 
     public function delete(int $id): void
     {
-        $this->db->where('id',$id)->delete($this->table);
+        $this->db->where('id', $id)->delete($this->table);
     }
 }

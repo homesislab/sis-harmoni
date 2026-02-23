@@ -1,14 +1,17 @@
 <?php
-defined('BASEPATH') OR exit('No direct script access allowed');
 
-class House_claim_model extends CI_Model
+defined('BASEPATH') or exit('No direct script access allowed');
+
+class House_claim_model extends MY_Model
 {
+    protected string $table_name = 'house_claims';
+
     public function find_by_id(int $id): ?array
     {
         $row = $this->db->select('hc.*, h.code as house_code, p.full_name as person_name')
             ->from('house_claims hc')
-            ->join('houses h','h.id=hc.house_id','left')
-            ->join('persons p','p.id=hc.person_id','left')
+            ->join('houses h', 'h.id=hc.house_id', 'left')
+            ->join('persons p', 'p.id=hc.person_id', 'left')
             ->where('hc.id', $id)
             ->get()->row_array();
         return $row ?: null;
@@ -20,14 +23,24 @@ class House_claim_model extends CI_Model
 
         $q = $this->db->select('hc.*, h.code as house_code, p.full_name as person_name')
             ->from('house_claims hc')
-            ->join('houses h','h.id=hc.house_id','left')
-            ->join('persons p','p.id=hc.person_id','left');
+            ->join('houses h', 'h.id=hc.house_id', 'left')
+            ->join('persons p', 'p.id=hc.person_id', 'left');
 
-        if (!empty($filters['source'])) $q->where('hc.source', $filters['source']);
-        if (!empty($filters['status'])) $q->where('hc.status', $filters['status']);
-        if (!empty($filters['claim_type'])) $q->where('hc.claim_type', $filters['claim_type']);
-        if (!empty($filters['house_id'])) $q->where('hc.house_id', (int)$filters['house_id']);
-        if (!empty($filters['person_id'])) $q->where('hc.person_id', (int)$filters['person_id']);
+        if (!empty($filters['source'])) {
+            $q->where('hc.source', $filters['source']);
+        }
+        if (!empty($filters['status'])) {
+            $q->where('hc.status', $filters['status']);
+        }
+        if (!empty($filters['claim_type'])) {
+            $q->where('hc.claim_type', $filters['claim_type']);
+        }
+        if (!empty($filters['house_id'])) {
+            $q->where('hc.house_id', (int)$filters['house_id']);
+        }
+        if (!empty($filters['person_id'])) {
+            $q->where('hc.person_id', (int)$filters['person_id']);
+        }
 
         if (!empty($filters['q'])) {
             $kw = trim((string)$filters['q']);
@@ -45,7 +58,7 @@ class House_claim_model extends CI_Model
         $totalQ = clone $q;
         $total = (int)$totalQ->count_all_results('', false);
 
-        $items = $q->order_by('hc.id','desc')->limit($perPage,$offset)->get()->result_array();
+        $items = $q->order_by('hc.id', 'desc')->limit($perPage, $offset)->get()->result_array();
 
         return [
             'items' => $items,
@@ -60,7 +73,9 @@ class House_claim_model extends CI_Model
         $is_primary = (int)($data['is_primary'] ?? 0) === 1 ? 1 : 0;
 
         $source = isset($data['source']) ? (string)$data['source'] : 'additional';
-        if (!in_array($source, ['registration','additional'], true)) $source = 'additional';
+        if (!in_array($source, ['registration','additional'], true)) {
+            $source = 'additional';
+        }
 
         $this->db->insert('house_claims', [
             'house_id' => (int)$data['house_id'],
@@ -83,9 +98,13 @@ class House_claim_model extends CI_Model
             'reviewed_by' => $reviewed_by,
             'reviewed_at' => date('Y-m-d H:i:s'),
         ];
-        if ($note !== null) $payload['note'] = $note;
-        if ($reject_note !== null) $payload['reject_note'] = $reject_note;
-        $this->db->where('id',$id)->update('house_claims',$payload);
+        if ($note !== null) {
+            $payload['note'] = $note;
+        }
+        if ($reject_note !== null) {
+            $payload['reject_note'] = $reject_note;
+        }
+        $this->db->where('id', $id)->update('house_claims', $payload);
     }
 
     public function has_open_claim(int $house_id, int $person_id): bool
@@ -109,8 +128,12 @@ class House_claim_model extends CI_Model
             'reviewed_at' => date('Y-m-d H:i:s'),
         ];
 
-        if ($note !== null) $payload['note'] = $note;
-        if ($reject_note !== null) $payload['reject_note'] = $reject_note;
+        if ($note !== null) {
+            $payload['note'] = $note;
+        }
+        if ($reject_note !== null) {
+            $payload['reject_note'] = $reject_note;
+        }
 
         $this->db->where('id', $id)->update('house_claims', $payload);
     }

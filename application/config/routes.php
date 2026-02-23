@@ -131,10 +131,10 @@ $route['api/v1/invoices/(:num)']['GET']       = 'api/Invoices/show/$1';
 $route['api/v1/invoices/(:num)']['PUT']       = 'api/Invoices/update/$1';
 $route['api/v1/invoices/(:num)']['DELETE']    = 'api/Invoices/destroy/$1';
 
-$route['api/v1/my/invoices']['GET']           = 'api/my/Invoices/index';
-$route['api/v1/my/invoices/(:num)']['GET']    = 'api/my/Invoices/show/$1';
-$route['api/v1/my/invoices/ensure']['POST']   = 'api/my/Invoices/ensure';
-$route['api/v1/my/invoices/preview']['POST']  = 'api/my/Invoices/preview';
+$route['api/v1/my/invoices']['GET']           = 'api/MyInvoices/index';
+$route['api/v1/my/invoices/(:num)']['GET']    = 'api/MyInvoices/show/$1';
+$route['api/v1/my/invoices/ensure']['POST']   = 'api/MyInvoices/ensure';
+$route['api/v1/my/invoices/preview']['POST']  = 'api/MyInvoices/preview';
 
 /* =========================================================
  * Payments
@@ -212,13 +212,36 @@ $route['api/v1/fundraisers/updates/(:num)']['PUT']              = 'api/Fundraise
 $route['api/v1/fundraisers/updates/(:num)']['DELETE']           = 'api/FundraiserUpdates/destroy/$1';
 
 /* =========================================================
+ * Security
+ * ======================================================= */
+$route['api/v1/security/guards']['GET']                         = 'api/SecurityGuards/index';
+$route['api/v1/security/guards']['POST']                        = 'api/SecurityGuards/store';
+$route['api/v1/security/guards/(:num)']['GET']                  = 'api/SecurityGuards/show/$1';
+$route['api/v1/security/guards/(:num)']['PUT']                  = 'api/SecurityGuards/update/$1';
+$route['api/v1/security/guards/(:num)']['DELETE']               = 'api/SecurityGuards/destroy/$1';
+
+$route['api/v1/security/shifts']['GET']                         = 'api/SecurityShifts/index';
+$route['api/v1/security/shifts']['POST']                        = 'api/SecurityShifts/store';
+$route['api/v1/security/shifts/(:num)']['GET']                  = 'api/SecurityShifts/show/$1';
+$route['api/v1/security/shifts/(:num)']['PUT']                  = 'api/SecurityShifts/update/$1';
+$route['api/v1/security/shifts/(:num)']['DELETE']               = 'api/SecurityShifts/destroy/$1';
+
+$route['api/v1/security/attendance']['GET']                     = 'api/SecurityAttendance/index';
+$route['api/v1/security/attendance/summary']['GET']             = 'api/SecurityAttendance/summary';
+$route['api/v1/security/attendance/calendar']['GET']            = 'api/SecurityAttendance/calendar';
+$route['api/v1/security/attendance/check-in']['POST']           = 'api/SecurityAttendance/check_in';
+$route['api/v1/security/attendance/check-out']['POST']          = 'api/SecurityAttendance/check_out';
+$route['api/v1/security/attendance/manual-log']['POST']         = 'api/SecurityAttendance/manual_log';
+$route['api/v1/security/attendance/(:num)']['DELETE']           = 'api/SecurityAttendance/destroy/$1';
+
+/* =========================================================
  * Guest Visits (Admin) + My Guest Visits
  * ======================================================= */
 $route['api/v1/guest-visits']['GET']                            = 'api/GuestVisits/index';
 $route['api/v1/guest-visits']['POST']                           = 'api/GuestVisits/store';
 $route['api/v1/guest-visits/(:num)/check-out']['POST']          = 'api/GuestVisits/check_out/$1';
 
-$route['api/v1/my/guest-visits']['GET']                         = 'api/my/GuestVisits/index';
+$route['api/v1/my/guest-visits']['GET']                         = 'api/MyGuestVisits/index';
 
 /* =========================================================
  * Emergencies
@@ -229,7 +252,7 @@ $route['api/v1/emergencies/(:num)/acknowledge']['POST']         = 'api/Emergenci
 $route['api/v1/emergencies/(:num)/resolve']['POST']             = 'api/Emergencies/resolve/$1';
 $route['api/v1/emergencies/(:num)/cancel']['POST']              = 'api/Emergencies/cancel/$1';
 
-$route['api/v1/my/emergencies']['GET']                          = 'api/my/Emergencies/index';
+$route['api/v1/my/emergencies']['GET']                          = 'api/MyEmergencies/index';
 
 /* =========================================================
  * Feedback
@@ -242,8 +265,8 @@ $route['api/v1/feedbacks/(:num)']['GET']                        = 'api/Feedback/
 $route['api/v1/feedbacks/(:num)/respond']['POST']               = 'api/Feedback/respond/$1';
 $route['api/v1/feedbacks/(:num)/close']['POST']                 = 'api/Feedback/close/$1';
 
-$route['api/v1/my/feedbacks']['GET']                            = 'api/my/Feedbacks/index';
-$route['api/v1/my/feedbacks/(:num)']['GET']                     = 'api/my/Feedbacks/show/$1';
+$route['api/v1/my/feedbacks']['GET']                            = 'api/MyFeedbacks/index';
+$route['api/v1/my/feedbacks/(:num)']['GET']                     = 'api/MyFeedbacks/show/$1';
 
 /* =========================================================
  * UMKM: Businesses + Products
