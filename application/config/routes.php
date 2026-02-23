@@ -248,6 +248,12 @@ $route['api/v1/my/guest-visits']['GET']                         = 'api/MyGuestVi
  * ======================================================= */
 $route['api/v1/emergencies']['GET']                             = 'api/Emergencies/index';
 $route['api/v1/emergencies']['POST']                            = 'api/Emergencies/store';
+
+/* =========================================================
+ * FCM Tokens
+ * ======================================================= */
+$route['api/v1/fcm/token']['POST']                              = 'api/FcmTokens/save';
+$route['api/v1/fcm/token']['DELETE']                            = 'api/FcmTokens/remove';
 $route['api/v1/emergencies/(:num)/acknowledge']['POST']         = 'api/Emergencies/acknowledge/$1';
 $route['api/v1/emergencies/(:num)/resolve']['POST']             = 'api/Emergencies/resolve/$1';
 $route['api/v1/emergencies/(:num)/cancel']['POST']              = 'api/Emergencies/cancel/$1';

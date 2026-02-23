@@ -10,6 +10,9 @@ class Emergencies extends MY_Controller
         $this->as_api();
         $this->require_auth();
         $this->load->model('Emergency_report_model', 'EmergencyModel');
+        $this->load->model('Fcm_token_model', 'TokenModel');
+        $this->load->model('House_model', 'HouseModel');
+        $this->load->model('Person_model', 'PersonModel');
     }
 
     public function index(): void
@@ -49,7 +52,110 @@ class Emergencies extends MY_Controller
         }
 
         $id = $this->EmergencyModel->create($payload);
-        api_ok($this->EmergencyModel->find_by_id($id), null, 201);
+        $record = $this->EmergencyModel->find_by_id($id);
+
+        // Send Push Notifications
+        $this->_send_panic_push($record);
+
+        api_ok($record, null, 201);
+    }
+
+    private function _send_panic_push(array $emergency): void
+    {
+        $sender_id = (int)$this->auth_user['id'];
+        $tokens = $this->TokenModel->get_tokens_except_user($sender_id);
+        
+        if (empty($tokens)) {
+            return;
+        }
+
+        $type_labels = [
+            'medical' => 'Darurat Medis',
+            'fire' => 'Kebakaran',
+            'crime' => 'Tindak Kriminal',
+            'accident' => 'Kecelakaan',
+            'lost_child' => 'Anak Hilang',
+            'other' => 'Darurat Lainnya'
+        ];
+        
+        $label = $type_labels[$emergency['type']] ?? 'Darurat';
+        
+        // Build address / reporter info
+        $loc_text = $emergency['location_text'] ?: 'Lokasi Tidak Diketahui';
+        
+        $reporter_name = 'Warga';
+        $unit_str = '';
+        
+        $this->load->model('Person_model');
+        if (!empty($emergency['reporter_person_id'])) {
+            $person_id = (int)$emergency['reporter_person_id'];
+            $person = $this->Person_model->find_by_id($person_id);
+            if ($person && !empty($person['full_name'])) {
+                $reporter_name = trim($person['full_name']);
+                
+                // Fetch the unit from their active household occupancy
+                $sql = "
+                    SELECT hs.block, hs.number 
+                    FROM household_members hm
+                    JOIN house_occupancies oc ON oc.household_id = hm.household_id AND oc.status = 'active'
+                    JOIN houses hs ON hs.id = oc.house_id
+                    WHERE hm.person_id = ?
+                    ORDER BY hm.id DESC, oc.start_date DESC
+                    LIMIT 1
+                ";
+                $q = $this->db->query($sql, [$person_id]);
+                if ($q && $q->num_rows() > 0) {
+                    $r = $q->row_array();
+                    $unit_str = trim(($r['block'] ?? '') . '-' . ($r['number'] ?? ''));
+                }
+            }
+        }
+        
+        // Fallback to emergency house_id if the direct mapping failed
+        if ($unit_str === '' && !empty($emergency['house_id'])) {
+            $h = $this->HouseModel->find_by_id($emergency['house_id']);
+            if ($h) {
+                $unit_str = trim(($h['block'] ?? '') . '-' . ($h['number'] ?? ''));
+            }
+        }
+        
+        if ($unit_str !== '' && $reporter_name !== 'Warga') {
+            $loc_text = "{$reporter_name}, unit {$unit_str}";
+        } elseif ($unit_str !== '') {
+            $loc_text = "Unit {$unit_str}";
+        } elseif ($reporter_name !== 'Warga') {
+            $loc_text = "{$reporter_name} (Lokasi Tidak Diketahui)";
+        }
+
+        $title = "🚨 PANIC: {$label} 🚨";
+        $body = "Lokasi: {$loc_text}\nBuka aplikasi sekarang untuk info lanjut.";
+
+        try {
+            $factory = (new \Kreait\Firebase\Factory)
+                ->withServiceAccount(APPPATH . 'config/firebase-service-account.json');
+            
+            $messaging = $factory->createMessaging();
+
+            foreach ($tokens as $token) {
+                try {
+                    $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
+                        ->withNotification(\Kreait\Firebase\Messaging\Notification::create($title, $body))
+                        ->withData([
+                            'type' => 'panic_button',
+                            'emergency_id' => (string)$emergency['id'],
+                            'emergency_type' => $emergency['type'],
+                            'location_text' => $loc_text,
+                            'timestamp' => time()
+                        ]);
+
+                    $messaging->send($message);
+                } catch (\Exception $subE) {
+                    log_message('error', 'FCM Panic Push chunk failed for token: ' . $subE->getMessage());
+                }
+            }
+        } catch (\Exception $e) {
+            log_message('error', 'FCM Panic Push Failed: ' . $e->getMessage());
+        }
     }
 
     public function acknowledge(int $id = 0): void
