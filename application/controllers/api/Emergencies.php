@@ -123,11 +123,17 @@ class Emergencies extends MY_Controller
     private function _send_panic_push(array $emergency): void
     {
         $sender_id = (int)$this->auth_user['id'];
+        
+        log_message('error', "FCM Trace: Starting push for Emergency ID " . $emergency['id'] . ", Sender ID: " . $sender_id);
+    
         $tokens = $this->TokenModel->get_tokens_except_user($sender_id);
         
         if (empty($tokens)) {
+            log_message('error', "FCM Trace: ABORTED! No other user tokens found to send the push to. Sender ID was: " . $sender_id);
             return;
         }
+
+        log_message('error', "FCM Trace: Found " . count($tokens) . " tokens. Preparing payload.");
 
         $type_labels = [
             'medical' => 'Darurat Medis',
@@ -190,31 +196,48 @@ class Emergencies extends MY_Controller
         $title = "🚨 PANIC: {$label} 🚨";
         $body = "Lokasi: {$loc_text}\nBuka aplikasi sekarang untuk info lanjut.";
 
+        log_message('error', "FCM Trace: Payload ready. Title: [{$title}]. Attempting Firebase SDK load.");
+
         try {
             $factory = (new \Kreait\Firebase\Factory)
                 ->withServiceAccount(APPPATH . 'config/firebase-service-account.json');
             
             $messaging = $factory->createMessaging();
+            
+            log_message('error', "FCM Trace: SDK Loaded successfully. Sending chunk...");
 
             foreach ($tokens as $token) {
                 try {
                     $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
                         ->withNotification(\Kreait\Firebase\Messaging\Notification::create($title, $body))
+                        ->withWebPushConfig([
+                            'notification' => [
+                                'title' => $title,
+                                'body' => $body,
+                                'icon' => '/icons/icon-192x192.png',
+                                'requireInteraction' => true,
+                                'vibrate' => [500, 250, 500, 250, 500, 250, 500],
+                            ],
+                            'fcm_options' => [
+                                'link' => '/community/emergencies'
+                            ]
+                        ])
                         ->withData([
                             'type' => 'panic_button',
                             'emergency_id' => (string)$emergency['id'],
                             'emergency_type' => $emergency['type'],
                             'location_text' => $loc_text,
-                            'timestamp' => time()
+                            'timestamp' => (string)time()
                         ]);
 
                     $messaging->send($message);
+                    log_message('error', "FCM Trace: Push sent successfully to token: " . substr($token, 0, 15) . "...");
                 } catch (\Exception $subE) {
-                    log_message('error', 'FCM Panic Push chunk failed for token: ' . $subE->getMessage());
+                    log_message('error', 'FCM Panic Push chunk failed for token ' . substr($token, 0, 15) . '... Error: ' . $subE->getMessage());
                 }
             }
         } catch (\Exception $e) {
-            log_message('error', 'FCM Panic Push Failed: ' . $e->getMessage());
+            log_message('error', 'FCM Panic Push Failed at factory level: ' . $e->getMessage());
         }
     }
 
