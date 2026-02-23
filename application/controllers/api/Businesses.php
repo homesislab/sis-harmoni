@@ -11,6 +11,7 @@ class Businesses extends MY_Controller
         $this->require_auth();
         $this->load->model('Local_business_model', 'BusinessModel');
         $this->load->model('Local_product_model', 'ProductModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -84,6 +85,23 @@ class Businesses extends MY_Controller
         }
 
         $id = $this->BusinessModel->create($payload);
+
+        // Send WA Notification to group pengurus
+        $admin_wa = $this->whatsapp->get_group_pengurus();
+        if ($admin_wa) {
+            $person_id = $payload['owner_person_id'] ?? 0;
+            $nama = 'Warga';
+            if ($person_id) {
+                $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+                if ($person) {
+                    $nama = $person['full_name'];
+                }
+            }
+            $bizName = $payload['name'] ?? 'Lapak/UMKM';
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Pengajuan UMKM/Lapak Baru!*\n\nWarga atas nama *{$nama}* mendaftarkan lapak: *{$bizName}*.\nMohon bantuannya untuk ditinjau di dashboard admin ya.";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
+
         api_ok($this->BusinessModel->find_by_id($id), null, 201);
     }
 
@@ -160,6 +178,19 @@ class Businesses extends MY_Controller
             'approved_by' => (int)$this->auth_user['id'],
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
+
+        // Send WA Notification
+        $person_id = (int)($row['owner_person_id'] ?? 0);
+        if ($person_id) {
+            $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            if ($person && !empty($person['phone'])) {
+                $nama = $person['full_name'] ?? 'Warga';
+                $bizName = $row['name'] ?? 'Lapak/UMKM';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, pengajuan lapak *{$bizName}* Anda sudah *DISETUJUI*.\nAnda sudah bisa mulai upload produk di aplikasi.\n\nSemoga usahanya lancar dan berkah!";
+                $this->whatsapp->send_message($person['phone'], $wa_msg);
+            }
+        }
+
         api_ok($this->BusinessModel->find_by_id($id));
     }
 
@@ -189,6 +220,19 @@ class Businesses extends MY_Controller
             'approved_by' => (int)$this->auth_user['id'],
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
+
+        // Send WA Notification
+        $person_id = (int)($row['owner_person_id'] ?? 0);
+        if ($person_id) {
+            $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            if ($person && !empty($person['phone'])) {
+                $nama = $person['full_name'] ?? 'Warga';
+                $bizName = $row['name'] ?? 'Lapak/UMKM';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, pengajuan lapak *{$bizName}* Anda statusnya *PERLU PERBAIKAN*.\nCatatan: {$reason}\n\nSilakan diperbaiki datanya, ditunggu pengajuan ulangnya ya.";
+                $this->whatsapp->send_message($person['phone'], $wa_msg);
+            }
+        }
+
         api_ok($this->BusinessModel->find_by_id($id));
     }
 

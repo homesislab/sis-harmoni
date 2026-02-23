@@ -10,6 +10,7 @@ class GuestVisits extends MY_Controller
         $this->as_api();
         $this->require_auth();
         $this->load->model('Guest_visit_model', 'GuestVisitModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -114,6 +115,47 @@ class GuestVisits extends MY_Controller
         ];
 
         $id = $this->GuestVisitModel->create($payload);
+
+        // Send WA Notification
+        if ($house_id > 0) {
+            $phone = null;
+            $nama = 'Warga';
+            
+            if ($host_person_id > 0) {
+                $pRow = $this->db->get_where('persons', ['id' => $host_person_id])->row_array();
+                if ($pRow) {
+                    $phone = $pRow['phone'] ?? null;
+                    $nama = $pRow['full_name'];
+                }
+            }
+            
+            if (!$phone) {
+                $sql = "
+                    SELECT p.phone, p.full_name 
+                    FROM house_occupancies ho
+                    JOIN households hh ON hh.id = ho.household_id
+                    JOIN persons p ON p.id = hh.head_person_id
+                    WHERE ho.house_id = ? AND ho.status = 'active'
+                    ORDER BY ho.id DESC LIMIT 1
+                ";
+                $q = $this->db->query($sql, [$house_id]);
+                if ($q && $q->num_rows() > 0) {
+                    $r = $q->row_array();
+                    $phone = $r['phone'];
+                    $nama = $r['full_name'];
+                }
+            }
+            
+            if ($phone) {
+                $vName = $payload['visitor_name'];
+                $vCount = $payload['visitor_count'];
+                $vPurpose = $payload['purpose'];
+                
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\nSaat ini ada tamu yang berkunjung ke unit Anda:\n\nNama Tamu: *{$vName}* ({$vCount} orang)\nKeperluan: *{$vPurpose}*\n\nTamu tersebut sudah diarahkan ke unit Anda oleh tim keamanan.";
+                $this->whatsapp->send_message($phone, $wa_msg);
+            }
+        }
+
         api_ok($this->GuestVisitModel->find_by_id($id), null, 201);
     }
 

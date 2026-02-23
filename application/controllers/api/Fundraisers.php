@@ -14,6 +14,7 @@ class Fundraisers extends MY_Controller
         $this->load->model('Donation_model', 'DonationModel');
         $this->load->model('Fundraiser_update_model', 'UpdateModel');
         $this->load->model('Ledger_model', 'LedgerModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -234,6 +235,20 @@ class Fundraisers extends MY_Controller
         }
         $amt = number_format((float)($don['amount'] ?? $amount), 0, ',', '.');
         audit_log($this, 'Mengirim donasi', 'Mengirim donasi Rp ' . $amt . ' untuk "' . $fundTitle . '"');
+
+        // Send WA Notification
+        $admin_wa = $this->whatsapp->get_admin_keuangan();
+        if ($admin_wa) {
+            $donor = ($is_anonymous === 1) ? 'Anonim' : 'Warga';
+            if ($is_anonymous === 0 && $person_id > 0) {
+                $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+                if ($pRow) {
+                    $donor = $pRow['full_name'];
+                }
+            }
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin Keuangan.\n\n📢 *Ada Donasi Baru!*\n\nKonfirmasi donasi sebesar *Rp {$amt}* dari *{$donor}* untuk program *{$fundTitle}*.\n\nMohon bantuannya untuk verifikasi bukti transfer di aplikasi.";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
 
         api_ok($this->DonationModel->find_by_id($id), null, 201);
     }

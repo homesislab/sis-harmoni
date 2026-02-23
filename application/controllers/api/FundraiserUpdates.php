@@ -11,6 +11,7 @@ class FundraiserUpdates extends MY_Controller
         $this->require_auth();
         $this->load->model('Fundraiser_model', 'FundraiserModel');
         $this->load->model('Fundraiser_update_model', 'UpdateModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(int $fundraiser_id = 0): void
@@ -81,6 +82,21 @@ class FundraiserUpdates extends MY_Controller
         }
 
         audit_log($this, 'Menambahkan update donasi', 'Menambahkan update "' . $updTitle . '" untuk "' . $fundTitle . '"');
+
+        // Broadcast WA
+        $donors = $this->db->select('DISTINCT(person_id) AS pid')->from('fundraiser_donations')->where('fundraiser_id', $fund['id'])->where('status', 'approved')->get()->result_array();
+        foreach ($donors as $dn) {
+            $pid = (int)$dn['pid'];
+            if ($pid > 0) {
+                $pRow = $this->db->get_where('persons', ['id' => $pid])->row_array();
+                if ($pRow && !empty($pRow['phone'])) {
+                    $nama = $pRow['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n📢 Info terbaru dari program donasi *{$fundTitle}*:\n_{$updTitle}_\n\nJazakumullah khairan katsiran atas doa dan dukungannya.";
+                    $this->whatsapp->send_message($pRow['phone'], $wa_msg);
+                }
+            }
+        }
+
         api_ok($this->UpdateModel->find_by_id($id), null, 201);
     }
 

@@ -10,6 +10,7 @@ class Registrations extends MY_Controller
         $this->as_api();
         $this->require_auth();
         $this->require_permission('app.services.requests.registrations.review');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -375,6 +376,17 @@ class Registrations extends MY_Controller
 
             api_ok(['ok' => true]);
 
+            // Send WA Notification to applicant
+            $head_person_id = $detail['head_person_id'] ?? 0;
+            if ($head_person_id > 0) {
+                $person = $this->db->get_where('persons', ['id' => $head_person_id])->row_array();
+                if ($person && !empty($person['phone'])) {
+                    $nama = $person['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, pendaftaran akun Anda sudah *DISETUJUI*!\nSilakan buka aplikasi dan login dengan akun yang sudah didaftarkan.\n\nSelamat bergabung dan bersilaturahmi di lingkungan kita.";
+                    $this->whatsapp->send_message($person['phone'], $wa_msg);
+                }
+            }
+
         } catch (Throwable $e) {
             $this->db->trans_rollback();
             api_error('VALIDATION', $e->getMessage(), 422);
@@ -425,6 +437,17 @@ class Registrations extends MY_Controller
             }
 
             api_ok(['ok' => true]);
+
+            // Send WA Notification to applicant
+            $head_person_id = $detail['head_person_id'] ?? 0;
+            if ($head_person_id > 0) {
+                $person = $this->db->get_where('persons', ['id' => $head_person_id])->row_array();
+                if ($person && !empty($person['phone'])) {
+                    $nama = $person['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, pendaftaran akun Anda saat ini *DITOLAK*.\nAlasan: {$reason}\n\nBila ada yang kurang jelas, silakan hubungi pengurus setempat untuk dibantu ya.";
+                    $this->whatsapp->send_message($person['phone'], $wa_msg);
+                }
+            }
 
         } catch (Throwable $e) {
             $this->db->trans_rollback();

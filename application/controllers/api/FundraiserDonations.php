@@ -12,6 +12,7 @@ class FundraiserDonations extends MY_Controller
         $this->load->model('Fundraiser_model', 'FundraiserModel');
         $this->load->model('Donation_model', 'DonationModel');
         $this->load->model('Ledger_model', 'LedgerModel');
+        $this->load->library('whatsapp');
     }
 
     public function index_admin(): void
@@ -97,6 +98,17 @@ class FundraiserDonations extends MY_Controller
             $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
             audit_log($this, 'Menyetujui donasi', 'Menyetujui donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 
+            // Send WA Notification
+            $person_id = (int)($don['person_id'] ?? 0);
+            if ($person_id > 0) {
+                $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+                if ($pRow && !empty($pRow['phone'])) {
+                    $nama = $pRow['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* sudah *DITERIMA & DISETUJUI*.\n\nJazakumullah khairan katsiran atas partisipasi Anda, semoga berkah!";
+                    $this->whatsapp->send_message($pRow['phone'], $wa_msg);
+                }
+            }
+
             api_ok(null, ['message' => 'Donation disetujui', 'ledger_entry_id' => $ledger_entry_id]);
         } catch (Throwable $e) {
             $this->db->trans_rollback();
@@ -138,6 +150,17 @@ class FundraiserDonations extends MY_Controller
         }
         $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
         audit_log($this, 'Menolak donasi', 'Menolak donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
+
+        // Send WA Notification
+        $person_id = (int)($don['person_id'] ?? 0);
+        if ($person_id > 0) {
+            $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            if ($pRow && !empty($pRow['phone'])) {
+                $nama = $pRow['full_name'] ?? 'Warga';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, konfirmasi donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* *DITOLAK*.\nAlasan: {$note}\n\nBisa tolong dicek kembali informasinya ya.";
+                $this->whatsapp->send_message($pRow['phone'], $wa_msg);
+            }
+        }
 
         api_ok(null, ['message' => 'Donation ditolak']);
     }

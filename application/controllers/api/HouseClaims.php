@@ -15,6 +15,7 @@ class HouseClaims extends MY_Controller
         $this->load->model('Occupancy_model', 'OccupancyModel');
         $this->load->model('House_model', 'HouseModel');
         $this->load->model('User_model', 'UserModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -168,6 +169,16 @@ class HouseClaims extends MY_Controller
         }
         $ct = ($claim_type === 'owner') ? 'Pemilik' : 'Penghuni';
         audit_log($this, 'Mengajukan klaim unit', 'Mengajukan klaim ' . $ct . ' untuk "' . $houseCode . '"');
+
+        // Send WA Notification to group pengurus
+        $admin_wa = $this->whatsapp->get_group_pengurus();
+        if ($admin_wa) {
+            $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            $nama = $person['full_name'] ?? 'Warga';
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Klaim Unit/Rumah Baru!*\n\nWarga atas nama *{$nama}* mengajukan klaim unit/rumah *{$houseCode}*.\nMohon dicek di aplikasi atau dashboard admin untuk verifikasi ya.";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
+
         api_ok($this->HouseClaimModel->find_by_id($id), null, 201);
     }
 
@@ -283,6 +294,15 @@ class HouseClaims extends MY_Controller
             $personName = 'warga';
         }
         audit_log($this, 'Menyetujui klaim unit', 'Menyetujui klaim unit "' . $houseCode . '" untuk ' . $personName);
+
+        // Send WA Notification
+        $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+        if ($person && !empty($person['phone'])) {
+            $nama = $person['full_name'] ?? 'Warga';
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, klaim unit/rumah *{$houseCode}* Anda sudah *DISETUJUI*.\nTerima kasih banyak.";
+            $this->whatsapp->send_message($person['phone'], $wa_msg);
+        }
+
         api_ok($this->HouseClaimModel->find_by_id($id));
     }
 
@@ -318,6 +338,16 @@ class HouseClaims extends MY_Controller
             $personName = 'warga';
         }
         audit_log($this, 'Menolak klaim unit', 'Menolak klaim unit "' . $houseCode . '" untuk ' . $personName);
+
+        // Send WA Notification
+        $person_id = (int)$claim['person_id'];
+        $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+        if ($person && !empty($person['phone'])) {
+            $nama = $person['full_name'] ?? 'Warga';
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, klaim unit/rumah *{$houseCode}* Anda sementara *DITOLAK*.\nAlasan: {$reject_note}\n\nSilakan komunikasikan dengan pengurus setempat untuk info lebih lanjut ya.";
+            $this->whatsapp->send_message($person['phone'], $wa_msg);
+        }
+
         api_ok($this->HouseClaimModel->find_by_id($id));
     }
 }

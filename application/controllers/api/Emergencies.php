@@ -13,6 +13,7 @@ class Emergencies extends MY_Controller
         $this->load->model('Fcm_token_model', 'TokenModel');
         $this->load->model('House_model', 'HouseModel');
         $this->load->model('Person_model', 'PersonModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -56,6 +57,65 @@ class Emergencies extends MY_Controller
 
         // Send Push Notifications
         $this->_send_panic_push($record);
+
+        // Send WA Notification
+        $admin_wa = $this->whatsapp->get_admin_security();
+        if ($admin_wa) {
+            $type_labels = [
+                'medical' => 'Darurat Medis',
+                'fire' => 'Kebakaran',
+                'crime' => 'Tindak Kriminal',
+                'accident' => 'Kecelakaan',
+                'lost_child' => 'Anak Hilang',
+                'other' => 'Darurat Lainnya'
+            ];
+            $label = $type_labels[$record['type']] ?? 'Darurat';
+            $loc_text = $record['location_text'] ?: 'Lokasi Tidak Diketahui';
+            
+            $reporter_name = 'Warga';
+            $unit_str = '';
+            
+            if (!empty($record['reporter_person_id'])) {
+                $person_id = (int)$record['reporter_person_id'];
+                $person = $this->PersonModel->find_by_id($person_id);
+                if ($person && !empty($person['full_name'])) {
+                    $reporter_name = trim($person['full_name']);
+                    
+                    $sql = "
+                        SELECT hs.block, hs.number 
+                        FROM household_members hm
+                        JOIN house_occupancies oc ON oc.household_id = hm.household_id AND oc.status = 'active'
+                        JOIN houses hs ON hs.id = oc.house_id
+                        WHERE hm.person_id = ?
+                        ORDER BY hm.id DESC, oc.start_date DESC
+                        LIMIT 1
+                    ";
+                    $q = $this->db->query($sql, [$person_id]);
+                    if ($q && $q->num_rows() > 0) {
+                        $r = $q->row_array();
+                        $unit_str = trim(($r['block'] ?? '') . '-' . ($r['number'] ?? ''));
+                    }
+                }
+            }
+            
+            if ($unit_str === '' && !empty($record['house_id'])) {
+                $h = $this->HouseModel->find_by_id($record['house_id']);
+                if ($h) {
+                    $unit_str = trim(($h['block'] ?? '') . '-' . ($h['number'] ?? ''));
+                }
+            }
+            
+            if ($unit_str !== '' && $reporter_name !== 'Warga') {
+                $loc_text = "{$reporter_name}, unit {$unit_str}";
+            } elseif ($unit_str !== '') {
+                $loc_text = "Unit {$unit_str}";
+            } elseif ($reporter_name !== 'Warga') {
+                $loc_text = "{$reporter_name} (Lokasi Tidak Diketahui)";
+            }
+            
+            $wa_msg = "*[Info SIS]*\n\n🚨 *PANIC BUTTON DITEKAN!* 🚨\n\nJenis Darurat: *{$label}*\nLokasi/Warga: *{$loc_text}*\n\nMohon tim keamanan segera merapat ke lokasi sekarang juga!";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
 
         api_ok($record, null, 201);
     }

@@ -15,6 +15,7 @@ class Onboarding extends MY_Controller
         $this->load->model('User_model', 'UserModel');
         $this->load->model('House_claim_model', 'HouseClaimModel');
         $this->load->model('Vehicle_model', 'VehicleModel');
+        $this->load->library('whatsapp');
     }
 
     public function units(): void
@@ -321,6 +322,14 @@ class Onboarding extends MY_Controller
                 'household_id' => $householdId,
                 'status' => 'pending_review',
             ], ['message' => 'Pendaftaran diterima, menunggu review pengurus'], 201);
+
+            // Send WA Notification to group pengurus
+            $admin_wa = $this->whatsapp->get_group_pengurus();
+            if ($admin_wa) {
+                $nama_pendaftar = $head['full_name'] ?? 'Warga Baru';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Pendaftaran Warga Baru!*\n\nAda warga baru yang meregistrasikan akun:\nNama: {$nama_pendaftar}\nNo. KK: {$kk}\n\nMohon bantuannya untuk verifikasi di dashboard admin ya. Terima kasih.";
+                $this->whatsapp->send_message($admin_wa, $wa_msg);
+            }
 
         } catch (Throwable $e) {
             $this->db->trans_rollback();

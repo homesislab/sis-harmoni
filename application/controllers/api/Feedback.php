@@ -12,6 +12,7 @@ class Feedback extends MY_Controller
         $this->load->model('Feedback_category_model', 'CategoryModel');
         $this->load->model('Feedback_model', 'FeedbackModel');
         $this->load->model('Feedback_response_model', 'ResponseModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -55,6 +56,23 @@ class Feedback extends MY_Controller
 
         $row = $this->FeedbackModel->find_by_id($id);
         $row['responses'] = [];
+
+        // Send WA Notification
+        $admin_wa = $this->whatsapp->get_group_pengurus();
+        if ($admin_wa) {
+            $person_id = $payload['person_id'] ?? 0;
+            $nama = 'Warga';
+            if ($person_id) {
+                $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+                if ($person) {
+                    $nama = $person['full_name'];
+                }
+            }
+            $cat = $row['category_name'] ?? 'Laporan';
+            $title = $row['title'] ?? '';
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Laporan Warga Baru!*\n\nAda pesan baru dari *{$nama}* mengenai *{$cat}*:\n_{$title}_\n\nMohon dicek di aplikasi atau dashboard admin untuk tindak lanjut ya.";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
 
         api_ok($row, null, 201);
     }
@@ -107,6 +125,19 @@ class Feedback extends MY_Controller
         $fb = $this->FeedbackModel->find_by_id($id);
         $fb['responses'] = $this->ResponseModel->list_for_feedback($id, true);
 
+        // Send WA Notification
+        $person_id = (int)($fb['person_id'] ?? 0);
+        if ($person_id) {
+            $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            if ($person && !empty($person['phone'])) {
+                $nama = $person['full_name'] ?? 'Warga';
+                $cat = $fb['category_name'] ?? 'Laporan';
+                $msg_text = $in['message'] ?? '';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n💬 Ada tanggapan dari pengurus terkait laporan Anda tentang *{$cat}*:\n_{$msg_text}_\n\nSilakan cek aplikasi untuk detailnya ya.";
+                $this->whatsapp->send_message($person['phone'], $wa_msg);
+            }
+        }
+
         api_ok($fb);
     }
 
@@ -131,6 +162,18 @@ class Feedback extends MY_Controller
 
         $fb = $this->FeedbackModel->find_by_id($id);
         $fb['responses'] = $this->ResponseModel->list_for_feedback($id, true);
+
+        // Send WA Notification
+        $person_id = (int)($fb['person_id'] ?? 0);
+        if ($person_id) {
+            $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
+            if ($person && !empty($person['phone'])) {
+                $nama = $person['full_name'] ?? 'Warga';
+                $cat = $fb['category_name'] ?? 'Laporan';
+                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Laporan Anda mengenai *{$cat}* sudah *DISELESAIKAN/DITUTUP* oleh pengurus.\nTerima kasih banyak atas laporannya.";
+                $this->whatsapp->send_message($person['phone'], $wa_msg);
+            }
+        }
 
         api_ok($fb);
     }

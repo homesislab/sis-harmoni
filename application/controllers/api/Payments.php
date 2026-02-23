@@ -14,6 +14,7 @@ class Payments extends MY_Controller
         $this->load->model('Invoice_model', 'InvoiceModel');
         $this->load->model('Charge_model', 'ChargeModel');
         $this->load->model('Ledger_model', 'LedgerModel');
+        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -109,6 +110,19 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Mengirim konfirmasi pembayaran', 'Mengirim konfirmasi pembayaran Rp ' . $amt . ' untuk ' . $labelText);
+
+        // Send WA Notification
+        $admin_wa = $this->whatsapp->get_admin_keuangan();
+        if ($admin_wa) {
+            $hh_name = 'Warga';
+            $hh = $this->db->select('p.full_name')->from('households h')->join('persons p', 'p.id = h.head_person_id')->where('h.id', $hhid)->get()->row_array();
+            if ($hh) {
+                $hh_name = $hh['full_name'];
+            }
+            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin Keuangan.\n\n📢 *Konfirmasi Pembayaran Baru!*\n\nWarga atas nama *{$hh_name}* sudah melakukan pembayaran sebesar *Rp {$amt}* untuk *{$labelText}*.\n\nMohon kesediaannya mengecek bukti transfer di dashboard admin ya.";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        }
+
         api_ok($this->PaymentModel->find_by_id($id), null, 201);
     }
 
@@ -293,6 +307,21 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Menyetujui pembayaran', 'Menyetujui pembayaran Rp ' . $amt . ' untuk ' . $labelText);
+
+        // Send WA Notification
+        $hhid = (int)($pay['payer_household_id'] ?? 0);
+        if ($hhid > 0) {
+            $hh = $this->db->get_where('households', ['id' => $hhid])->row_array();
+            if ($hh && !empty($hh['head_person_id'])) {
+                $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
+                if ($person && !empty($person['phone'])) {
+                    $pName = $person['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\n✅ Alhamdulillah, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* sudah *DISETUJUI*.\n\nTerima kasih banyak atas pembayarannya, semoga barokah.";
+                    $this->whatsapp->send_message($person['phone'], $wa_msg);
+                }
+            }
+        }
+
         api_ok($this->PaymentModel->find_by_id($id));
     }
 
@@ -333,6 +362,21 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Menolak pembayaran', 'Menolak pembayaran Rp ' . $amt . ' untuk ' . $labelText);
+
+        // Send WA Notification
+        $hhid = (int)($pay['payer_household_id'] ?? 0);
+        if ($hhid > 0) {
+            $hh = $this->db->get_where('households', ['id' => $hhid])->row_array();
+            if ($hh && !empty($hh['head_person_id'])) {
+                $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
+                if ($person && !empty($person['phone'])) {
+                    $pName = $person['full_name'] ?? 'Warga';
+                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\n❌ Mohon maaf, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* *DITOLAK*.\nAlasan: {$note}\n\nSilakan dicek kembali bukti pembayarannya atau hubungi pengurus ya.";
+                    $this->whatsapp->send_message($person['phone'], $wa_msg);
+                }
+            }
+        }
+
         api_ok($this->PaymentModel->find_by_id($id));
     }
 

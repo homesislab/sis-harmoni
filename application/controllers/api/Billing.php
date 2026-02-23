@@ -12,6 +12,8 @@ class Billing extends MY_Controller
 
         $this->load->model('Invoice_model', 'InvoiceModel');
         $this->load->model('Charge_model', 'ChargeModel');
+        $this->load->model('Household_model', 'HouseholdModel');
+        $this->load->library('whatsapp');
     }
 
     public function generate(): void
@@ -108,6 +110,20 @@ class Billing extends MY_Controller
                     'sort_order' => 1,
                 ]);
                 $created++;
+
+                // Send WA to Head of Household
+                $hh = $this->HouseholdModel->find_by_id($hhid);
+                if ($hh && !empty($hh['head_person_id'])) {
+                    $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
+                    if ($person && !empty($person['phone'])) {
+                        $pName = $person['full_name'] ?? 'Warga';
+                        $amtStr = number_format($default_amount, 0, ',', '.');
+                        $cName = $ct['name'] ?? 'Tagihan';
+                        $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\nTagihan *{$cName}* untuk periode *{$period}* sebesar *Rp {$amtStr}* telah diterbitkan.\n\nMohon berkenan untuk melunasi sebelum jatuh tempo ya. Terima kasih banyak.";
+                        $this->whatsapp->send_message($person['phone'], $wa_msg);
+                    }
+                }
+
             } catch (Throwable $e) {
                 $errors++;
             }
