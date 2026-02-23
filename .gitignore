@@ -24,6 +24,9 @@ application/cache/*
 uploads/*
 !uploads/.gitkeep
 
+# Firebase Credentials
+firebase-service-account.json
+
 # Node/Build (if any)
 node_modules/
 dist/
