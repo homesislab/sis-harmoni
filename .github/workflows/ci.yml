@@ -58,6 +58,7 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           CF_ID: ${{ secrets.CF_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_CLIENT_SECRET }}
+          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
         run: |
           set -e
 
@@ -80,6 +81,10 @@ jobs:
             cd /home/gie/workspace/sis-harmoni
             git fetch origin main
             git reset --hard origin/main
+
+            # Inject Firebase Service Account from Secret
+            mkdir -p application/config
+            echo \"\$FIREBASE_CREDENTIALS\" > application/config/firebase-service-account.json
 
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
