@@ -382,7 +382,7 @@ class Registrations extends MY_Controller
                 $person = $this->db->get_where('persons', ['id' => $head_person_id])->row_array();
                 if ($person && !empty($person['phone'])) {
                     $nama = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, pendaftaran akun Anda sudah *DISETUJUI*!\nSilakan buka aplikasi dan login dengan akun yang sudah didaftarkan.\n\nSelamat bergabung dan bersilaturahmi di lingkungan kita.";
+                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, pendaftaran akun Anda telah disetujui.\nSilakan login dan mulai menggunakan layanan yang tersedia.\n\nSemoga dapat membantu memudahkan urusan bersama di lingkungan kita.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($person['phone'], $wa_msg);
                 }
             }
@@ -444,7 +444,7 @@ class Registrations extends MY_Controller
                 $person = $this->db->get_where('persons', ['id' => $head_person_id])->row_array();
                 if ($person && !empty($person['phone'])) {
                     $nama = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, pendaftaran akun Anda saat ini *DITOLAK*.\nAlasan: {$reason}\n\nBila ada yang kurang jelas, silakan hubungi pengurus setempat untuk dibantu ya.";
+                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas pengajuan pendaftaran yang telah disampaikan.\nUntuk saat ini, pendaftaran tersebut belum dapat diproses dengan alasan berikut:\n\n{$reason}\n\nSilakan dikomunikasikan kembali dengan pengurus apabila diperlukan.\nInsyaAllah akan dibantu.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($person['phone'], $wa_msg);
                 }
             }

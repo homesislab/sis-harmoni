@@ -327,7 +327,7 @@ class Onboarding extends MY_Controller
             $admin_wa = $this->whatsapp->get_group_pengurus();
             if ($admin_wa) {
                 $nama_pendaftar = $head['full_name'] ?? 'Warga Baru';
-                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Pendaftaran Warga Baru!*\n\nAda warga baru yang meregistrasikan akun:\nNama: {$nama_pendaftar}\nNo. KK: {$kk}\n\nMohon bantuannya untuk verifikasi di dashboard admin ya. Terima kasih.";
+                $wa_msg = "Assalamu’alaikum\n\nTerdapat pendaftaran warga baru dengan data:\nNama: *{$nama_pendaftar}*\nNo. KK: *{$kk}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                 $this->whatsapp->send_message($admin_wa, $wa_msg);
             }
 

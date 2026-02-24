@@ -113,7 +113,7 @@ class Emergencies extends MY_Controller
                 $loc_text = "{$reporter_name} (Lokasi Tidak Diketahui)";
             }
             
-            $wa_msg = "*[Info SIS]*\n\n🚨 *PANIC BUTTON DITEKAN!* 🚨\n\nJenis Darurat: *{$label}*\nLokasi/Warga: *{$loc_text}*\n\nMohon tim keamanan segera merapat ke lokasi sekarang juga!";
+            $wa_msg = "🚨 *Pemberitahuan Darurat* 🚨\n\nTerdapat laporan kondisi darurat dengan rincian:\nJenis: *{$label}*\nLokasi/Warga: *{$loc_text}*\n\nMohon bantuan pihak terdekat untuk segera menuju lokasi.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 

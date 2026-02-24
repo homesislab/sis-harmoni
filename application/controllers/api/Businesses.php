@@ -98,7 +98,7 @@ class Businesses extends MY_Controller
                 }
             }
             $bizName = $payload['name'] ?? 'Lapak/UMKM';
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Pengajuan UMKM/Lapak Baru!*\n\nWarga atas nama *{$nama}* mendaftarkan lapak: *{$bizName}*.\nMohon bantuannya untuk ditinjau di dashboard admin ya.";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat pengajuan UMKM/Lapak baru dengan data:\nNama Pemilik: *{$nama}*\nNama Lapak: *{$bizName}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -186,7 +186,7 @@ class Businesses extends MY_Controller
             if ($person && !empty($person['phone'])) {
                 $nama = $person['full_name'] ?? 'Warga';
                 $bizName = $row['name'] ?? 'Lapak/UMKM';
-                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, pengajuan lapak *{$bizName}* Anda sudah *DISETUJUI*.\nAnda sudah bisa mulai upload produk di aplikasi.\n\nSemoga usahanya lancar dan berkah!";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, pengajuan lapak *{$bizName}* Anda telah disetujui.\nSilakan mulai menggunakan layanan pengelolaan lapak yang tersedia.\n\nSemoga usahanya senantiasa dilancarkan dan membawa kesuksesan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }
@@ -228,7 +228,7 @@ class Businesses extends MY_Controller
             if ($person && !empty($person['phone'])) {
                 $nama = $person['full_name'] ?? 'Warga';
                 $bizName = $row['name'] ?? 'Lapak/UMKM';
-                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, pengajuan lapak *{$bizName}* Anda statusnya *PERLU PERBAIKAN*.\nCatatan: {$reason}\n\nSilakan diperbaiki datanya, ditunggu pengajuan ulangnya ya.";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas pengajuan lapak *{$bizName}* yang telah disampaikan.\nUntuk saat ini, pengajuan tersebut belum dapat diproses (Perlu Perbaikan) dengan alasan berikut:\n\n{$reason}\n\nSilakan diperbaiki datanya, atau dikomunikasikan dengan pengurus apabila diperlukan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }

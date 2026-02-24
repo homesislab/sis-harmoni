@@ -104,7 +104,7 @@ class FundraiserDonations extends MY_Controller
                 $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
                 if ($pRow && !empty($pRow['phone'])) {
                     $nama = $pRow['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* sudah *DITERIMA & DISETUJUI*.\n\nJazakumullah khairan katsiran atas partisipasi Anda, semoga berkah!";
+                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* telah diterima dengan baik.\n\nJazakumullah khairan katsiran atas partisipasi Anda, semoga menjadi amal jariyah dan membawa keberkahan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($pRow['phone'], $wa_msg);
                 }
             }
@@ -157,7 +157,7 @@ class FundraiserDonations extends MY_Controller
             $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
             if ($pRow && !empty($pRow['phone'])) {
                 $nama = $pRow['full_name'] ?? 'Warga';
-                $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, konfirmasi donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* *DITOLAK*.\nAlasan: {$note}\n\nBisa tolong dicek kembali informasinya ya.";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas konfirmasi donasi sebesar *Rp {$amt}* untuk program *{$fundTitle}*.\nNamun, untuk saat ini konfirmasi belum dapat diproses dengan alasan berikut:\n\n{$note}\n\nSilakan dicek kembali informasinya atau komunikasikan dengan pengurus apabila terdapat kendala.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                 $this->whatsapp->send_message($pRow['phone'], $wa_msg);
             }
         }

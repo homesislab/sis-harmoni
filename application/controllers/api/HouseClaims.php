@@ -175,7 +175,7 @@ class HouseClaims extends MY_Controller
         if ($admin_wa) {
             $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
             $nama = $person['full_name'] ?? 'Warga';
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin.\n\n📢 *Klaim Unit/Rumah Baru!*\n\nWarga atas nama *{$nama}* mengajukan klaim unit/rumah *{$houseCode}*.\nMohon dicek di aplikasi atau dashboard admin untuk verifikasi ya.";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat pengajuan klaim unit/rumah dengan data:\nNama: *{$nama}*\nUnit: *{$houseCode}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -299,7 +299,7 @@ class HouseClaims extends MY_Controller
         $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
         if ($person && !empty($person['phone'])) {
             $nama = $person['full_name'] ?? 'Warga';
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n✅ Alhamdulillah, klaim unit/rumah *{$houseCode}* Anda sudah *DISETUJUI*.\nTerima kasih banyak.";
+            $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, pengajuan klaim unit/rumah *{$houseCode}* Anda telah disetujui.\nSilakan mulai menggunakan layanan yang tersedia.\n\nSemoga dapat membantu memudahkan urusan bersama di lingkungan kita.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($person['phone'], $wa_msg);
         }
 
@@ -344,7 +344,7 @@ class HouseClaims extends MY_Controller
         $person = $this->db->get_where('persons', ['id' => $person_id])->row_array();
         if ($person && !empty($person['phone'])) {
             $nama = $person['full_name'] ?? 'Warga';
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n❌ Mohon maaf, klaim unit/rumah *{$houseCode}* Anda sementara *DITOLAK*.\nAlasan: {$reject_note}\n\nSilakan komunikasikan dengan pengurus setempat untuk info lebih lanjut ya.";
+            $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas pengajuan klaim unit/rumah *{$houseCode}* yang telah disampaikan.\nUntuk saat ini, pengajuan tersebut belum dapat diproses dengan alasan berikut:\n\n{$reject_note}\n\nSilakan dikomunikasikan kembali dengan pengurus apabila diperlukan.\nInsyaAllah akan dibantu.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($person['phone'], $wa_msg);
         }
 

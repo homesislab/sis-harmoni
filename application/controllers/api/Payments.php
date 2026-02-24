@@ -119,7 +119,7 @@ class Payments extends MY_Controller
             if ($hh) {
                 $hh_name = $hh['full_name'];
             }
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin Keuangan.\n\n📢 *Konfirmasi Pembayaran Baru!*\n\nWarga atas nama *{$hh_name}* sudah melakukan pembayaran sebesar *Rp {$amt}* untuk *{$labelText}*.\n\nMohon kesediaannya mengecek bukti transfer di dashboard admin ya.";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat konfirmasi pembayaran baru dengan rincian:\nNama: *{$hh_name}*\nNominal: *Rp {$amt}*\nUntuk: *{$labelText}*\n\nMohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -316,7 +316,7 @@ class Payments extends MY_Controller
                 $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
                 if ($person && !empty($person['phone'])) {
                     $pName = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\n✅ Alhamdulillah, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* sudah *DISETUJUI*.\n\nTerima kasih banyak atas pembayarannya, semoga barokah.";
+                    $wa_msg = "Assalamu’alaikum, {$pName}\n\nAlhamdulillah, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* telah kami terima dengan baik.\n\nTerima kasih banyak atas partisipasinya dalam pengelolaan lingkungan kita, semoga membawa keberkahan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($person['phone'], $wa_msg);
                 }
             }
@@ -371,7 +371,7 @@ class Payments extends MY_Controller
                 $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
                 if ($person && !empty($person['phone'])) {
                     $pName = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\n❌ Mohon maaf, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* *DITOLAK*.\nAlasan: {$note}\n\nSilakan dicek kembali bukti pembayarannya atau hubungi pengurus ya.";
+                    $wa_msg = "Assalamu’alaikum, {$pName}\n\nTerima kasih atas konfirmasi pembayaran sebesar *Rp {$amt}* untuk *{$labelText}*.\nNamun, untuk saat ini konfirmasi belum dapat diproses dengan alasan berikut:\n\n{$note}\n\nSilakan dicek kembali atau dikomunikasikan dengan pengurus apabila diperlukan. InsyaAllah akan dibantu.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($person['phone'], $wa_msg);
                 }
             }

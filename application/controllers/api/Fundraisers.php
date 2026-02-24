@@ -246,7 +246,7 @@ class Fundraisers extends MY_Controller
                     $donor = $pRow['full_name'];
                 }
             }
-            $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, Admin Keuangan.\n\n📢 *Ada Donasi Baru!*\n\nKonfirmasi donasi sebesar *Rp {$amt}* dari *{$donor}* untuk program *{$fundTitle}*.\n\nMohon bantuannya untuk verifikasi bukti transfer di aplikasi.";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat donasi baru dengan rincian:\nDari: *{$donor}*\nProgram: *{$fundTitle}*\nNominal: *Rp {$amt}*\n\nMohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 

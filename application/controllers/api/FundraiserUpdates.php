@@ -91,7 +91,7 @@ class FundraiserUpdates extends MY_Controller
                 $pRow = $this->db->get_where('persons', ['id' => $pid])->row_array();
                 if ($pRow && !empty($pRow['phone'])) {
                     $nama = $pRow['full_name'] ?? 'Warga';
-                    $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$nama}*,\n\n📢 Info terbaru dari program donasi *{$fundTitle}*:\n_{$updTitle}_\n\nJazakumullah khairan katsiran atas doa dan dukungannya.";
+                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat informasi terbaru mengenai program donasi *{$fundTitle}*:\n_{$updTitle}_\n\nJazakumullah khairan katsiran atas doa dan dukungannya.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($pRow['phone'], $wa_msg);
                 }
             }

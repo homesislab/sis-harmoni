@@ -119,7 +119,7 @@ class Billing extends MY_Controller
                         $pName = $person['full_name'] ?? 'Warga';
                         $amtStr = number_format($default_amount, 0, ',', '.');
                         $cName = $ct['name'] ?? 'Tagihan';
-                        $wa_msg = "*[Info SIS]*\n\nAssalamu'alaikum, *{$pName}*,\n\nTagihan *{$cName}* untuk periode *{$period}* sebesar *Rp {$amtStr}* telah diterbitkan.\n\nMohon berkenan untuk melunasi sebelum jatuh tempo ya. Terima kasih banyak.";
+                        $wa_msg = "Assalamu’alaikum, {$pName}\n\nKami sampaikan bahwa untuk periode *{$period}* terdapat tagihan\n*{ $cName}* sebesar *Rp {$amtStr}*.\n\nTagihan ini digunakan untuk kebutuhan dan pengelolaan bersama di lingkungan kita.\nMohon dapat ditunaikan pada periode berjalan agar kegiatan bersama tetap berjalan dengan baik.\n\nApabila terdapat kendala, silakan dikomunikasikan dengan pengurus agar dapat dicari jalan terbaik bersama.\n\nDetail tagihan dapat dilihat di layanan SIS Paguyuban.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                         $this->whatsapp->send_message($person['phone'], $wa_msg);
                     }
                 }
