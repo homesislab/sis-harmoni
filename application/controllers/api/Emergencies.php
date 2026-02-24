@@ -186,11 +186,11 @@ class Emergencies extends MY_Controller
         }
         
         if ($unit_str !== '' && $reporter_name !== 'Warga') {
-            $loc_text = "{$reporter_name}, unit {$unit_str}";
+            $loc_text = "{$reporter_name}, Unit {$unit_str}";
         } elseif ($unit_str !== '') {
             $loc_text = "Unit {$unit_str}";
         } elseif ($reporter_name !== 'Warga') {
-            $loc_text = "{$reporter_name} (Lokasi Tidak Diketahui)";
+            $loc_text = "{$reporter_name} (Sistem tidak dapat melacak unit)";
         }
 
         $title = "🚨 PANIC: {$label} 🚨";
@@ -214,6 +214,8 @@ class Emergencies extends MY_Controller
                             'emergency_id' => (string)$emergency['id'],
                             'emergency_type' => $emergency['type'],
                             'location_text' => $loc_text,
+                            'reporter_name' => $reporter_name,
+                            'unit_str' => $unit_str,
                             'timestamp' => (string)time(),
                             'title' => $title,
                             'body' => $body
