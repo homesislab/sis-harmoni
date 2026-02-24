@@ -76,16 +76,26 @@ jobs:
             echo "  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET"
           } >> ~/.ssh/config
 
+          # Prepare config locally on GitHub Runner
+          echo "$FIREBASE_CREDENTIALS" > firebase-service-account.json
+
+          # Checkout the latest code and prepare config folder on the remote server
           ssh ssh.homesislab.my.id "bash -lc '
             set -e
             cd /home/gie/workspace/sis-harmoni
             git fetch origin main
             git reset --hard origin/main
-
-            # Inject Firebase Service Account from Secret
             mkdir -p application/config
-            echo \"\$FIREBASE_CREDENTIALS\" > application/config/firebase-service-account.json
+          '"
 
+          # Safely copy the JSON file using SCP instead of SSH string evaluation
+          scp firebase-service-account.json ssh.homesislab.my.id:/home/gie/workspace/sis-harmoni/application/config/firebase-service-account.json
+          rm firebase-service-account.json
+
+          # Restart Docker with the newly injected credentials
+          ssh ssh.homesislab.my.id "bash -lc '
+            set -e
+            cd /home/gie/workspace/sis-harmoni
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
 
