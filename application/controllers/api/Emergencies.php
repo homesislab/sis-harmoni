@@ -226,7 +226,7 @@ class Emergencies extends MY_Controller
                     log_message('error', 'FCM Panic Push chunk failed for token ' . substr($token, 0, 15) . '... Error: ' . $errMsg);
 
                     // Auto-remove stale tokens
-                    if (strpos($errMsg, 'not known to the Firebase project') !== false || 
+                    if (strpos($errMsg, 'not known to the Firebase') !== false || 
                         strpos($errMsg, 'NotRegistered') !== false ||
                         strpos($errMsg, 'Invalid registration token') !== false) {
                         $this->TokenModel->remove_token($token);

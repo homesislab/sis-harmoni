@@ -342,3 +342,8 @@ $route['api/v1/dashboard/report']['GET']                         = 'api/Dashboar
 $route['api/v1/org-units']['GET']                               = 'api/OrgUnits/index';
 
 $route['api/v1/audit-logs']['GET']                               = 'api/AuditLogs/index';
+
+/* =========================================================
+ * System / Health Check
+ * ======================================================= */
+$route['api/v1/system/health']['GET']                            = 'api/SystemHealth/index';
