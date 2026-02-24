@@ -209,31 +209,29 @@ class Emergencies extends MY_Controller
             foreach ($tokens as $token) {
                 try {
                     $message = \Kreait\Firebase\Messaging\CloudMessage::withTarget('token', $token)
-                        ->withNotification(\Kreait\Firebase\Messaging\Notification::create($title, $body))
-                        ->withWebPushConfig([
-                            'notification' => [
-                                'title' => $title,
-                                'body' => $body,
-                                'icon' => '/icons/icon-192x192.png',
-                                'requireInteraction' => true,
-                                'vibrate' => [500, 250, 500, 250, 500, 250, 500],
-                            ],
-                            'fcm_options' => [
-                                'link' => '/community/emergencies'
-                            ]
-                        ])
                         ->withData([
                             'type' => 'panic_button',
                             'emergency_id' => (string)$emergency['id'],
                             'emergency_type' => $emergency['type'],
                             'location_text' => $loc_text,
-                            'timestamp' => (string)time()
+                            'timestamp' => (string)time(),
+                            'title' => $title,
+                            'body' => $body
                         ]);
 
                     $messaging->send($message);
                     log_message('error', "FCM Trace: Push sent successfully to token: " . substr($token, 0, 15) . "...");
                 } catch (\Exception $subE) {
-                    log_message('error', 'FCM Panic Push chunk failed for token ' . substr($token, 0, 15) . '... Error: ' . $subE->getMessage());
+                    $errMsg = $subE->getMessage();
+                    log_message('error', 'FCM Panic Push chunk failed for token ' . substr($token, 0, 15) . '... Error: ' . $errMsg);
+
+                    // Auto-remove stale tokens
+                    if (strpos($errMsg, 'not known to the Firebase project') !== false || 
+                        strpos($errMsg, 'NotRegistered') !== false ||
+                        strpos($errMsg, 'Invalid registration token') !== false) {
+                        $this->TokenModel->remove_token($token);
+                        log_message('error', 'FCM Token has been auto-removed from database: ' . substr($token, 0, 15) . '...');
+                    }
                 }
             }
         } catch (\Exception $e) {
