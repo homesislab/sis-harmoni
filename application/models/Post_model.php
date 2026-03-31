@@ -59,6 +59,23 @@ class Post_model extends MY_Model
         return $row ?: null;
     }
 
+
+    public function find_public_by_slug(string $slug): ?array
+    {
+        $items = $this->db
+            ->select('id, title')
+            ->from('posts')
+            ->where('status', 'published')
+            ->get()
+            ->result_array();
+        foreach ($items as $item) {
+            if (slugify_text($item['title'] ?? '') === $slug) {
+                return $this->find_by_id((int)$item['id']);
+            }
+        }
+        return null;
+    }
+
     public function create(array $in, int $created_by): int
     {
         $this->db->insert('posts', [

@@ -146,3 +146,29 @@ if (!function_exists('validate_proof_url')) {
         return null;
     }
 }
+
+
+if (!function_exists('slugify_text')) {
+    function slugify_text(?string $value): string
+    {
+        $text = trim((string)$value);
+        if ($text === '') return '';
+
+        $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        $text = strtolower((string)$text);
+        $text = preg_replace('/[^a-z0-9]+/', '-', $text);
+        $text = trim((string)$text, '-');
+        $text = preg_replace('/-+/', '-', (string)$text);
+        return (string)$text;
+    }
+}
+
+if (!function_exists('absolute_url')) {
+    function absolute_url(?string $value): ?string
+    {
+        $url = trim((string)$value);
+        if ($url === '') return null;
+        if (preg_match('/^https?:\/\//i', $url)) return $url;
+        return rtrim(base_url(), '/') . '/' . ltrim($url, '/');
+    }
+}

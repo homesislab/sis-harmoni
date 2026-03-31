@@ -14,6 +14,23 @@ class Meeting_minute_model extends MY_Model
         return $row ?: null;
     }
 
+
+    public function find_public_by_slug(string $slug): ?array
+    {
+        $items = $this->db
+            ->select('id, title')
+            ->from($this->table)
+            ->where('status', 'published')
+            ->get()
+            ->result_array();
+        foreach ($items as $item) {
+            if (slugify_text($item['title'] ?? '') === $slug) {
+                return $this->find_by_id((int)$item['id']);
+            }
+        }
+        return null;
+    }
+
     public function create(array $data): int
     {
         $payload = [

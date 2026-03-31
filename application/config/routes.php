@@ -322,6 +322,22 @@ $route['api/v1/meeting-minutes/(:num)']['PUT']                   = 'api/MeetingM
 $route['api/v1/meeting-minutes/(:num)']['DELETE']                = 'api/MeetingMinutes/destroy/$1';
 $route['api/v1/meeting-minutes/(:num)/action-items']['POST']     = 'api/MeetingMinutes/action_items_create/$1';
 
+
+/* =========================================================
+ * Public Share API + Share Pages
+ * ======================================================= */
+$route['api/v1/public/events/slug/(:any)']['GET']                = 'api/PublicShare/event/$1';
+$route['api/v1/public/posts/slug/(:any)']['GET']                 = 'api/PublicShare/post/$1';
+$route['api/v1/public/fundraisers/slug/(:any)']['GET']           = 'api/PublicShare/fundraiser/$1';
+$route['api/v1/public/businesses/slug/(:any)']['GET']            = 'api/PublicShare/business/$1';
+$route['api/v1/public/meeting-minutes/slug/(:any)']['GET']       = 'api/PublicShare/meeting_minute/$1';
+
+$route['share/kegiatan/(:any)']['GET']                           = 'Share/event/$1';
+$route['share/info/(:any)']['GET']                               = 'Share/post/$1';
+$route['share/donasi/(:any)']['GET']                             = 'Share/fundraiser/$1';
+$route['share/usaha/(:any)']['GET']                              = 'Share/business/$1';
+$route['share/notulen/(:any)']['GET']                            = 'Share/meeting_minute/$1';
+
 $route['api/v1/meeting-action-items/(:num)']['PUT']              = 'api/MeetingActionItems/update/$1';
 $route['api/v1/meeting-action-items/(:num)']['DELETE']           = 'api/MeetingActionItems/destroy/$1';
 
