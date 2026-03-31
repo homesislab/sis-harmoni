@@ -16,8 +16,29 @@ class Share extends CI_Controller
         $this->load->model('Meeting_minute_model', 'MinutesModel');
     }
 
+    private function resolve_app_redirect_url(): ?string
+    {
+        $origin = trim((string) $this->input->get('open_app', true));
+        if ($origin === '') {
+            return null;
+        }
+
+        $parts = parse_url($origin);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true) || $host === '') {
+            return null;
+        }
+
+        $origin = rtrim($scheme . '://' . $host . (!empty($parts['port']) ? ':' . $parts['port'] : ''), '/');
+        $path = parse_url((string) current_url(), PHP_URL_PATH) ?: '/';
+
+        return $origin . $path;
+    }
+
     private function render_page(array $payload): void
     {
+        $payload['app_redirect_url'] = $this->resolve_app_redirect_url();
         $this->load->view('share_page', $payload);
     }
 
