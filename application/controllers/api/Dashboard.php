@@ -33,6 +33,12 @@ class Dashboard extends MY_Controller
         return $qb;
     }
 
+    private function invoice_outstanding_expr(string $invoiceAlias = 'i'): string
+    {
+        $invoiceAlias = preg_replace('/[^a-zA-Z0-9_]/', '', $invoiceAlias) ?: 'i';
+        return "GREATEST(COALESCE({$invoiceAlias}.total_amount,0) - COALESCE((SELECT SUM(pia.allocated_amount) FROM payment_invoice_allocations pia INNER JOIN payments p_alloc ON p_alloc.id = pia.payment_id WHERE pia.invoice_id = {$invoiceAlias}.id AND p_alloc.status = 'approved'),0),0)";
+    }
+
     private function my_user_id(): int
     {
         if (isset($this->auth_user) && is_array($this->auth_user) && isset($this->auth_user['id'])) {
@@ -140,20 +146,21 @@ class Dashboard extends MY_Controller
             ->get()->result_array();
 
         $householdId = $this->my_household_id();
+        $outstandingExpr = $this->invoice_outstanding_expr('i');
 
         $unpaid_amount = 0.0;
         $unpaid_invoices = 0;
 
         if ($householdId > 0 && $this->db->table_exists('invoices')) {
-            $unpaid_amount = (float)($this->db->select('COALESCE(SUM(total_amount),0) AS s', false)
-                ->from('invoices')
-                ->where('household_id', $householdId)
-                ->where_in('status', ['unpaid', 'partial'])
+            $unpaid_amount = (float)($this->db->select("COALESCE(SUM({$outstandingExpr}),0) AS s", false)
+                ->from('invoices i')
+                ->where('i.household_id', $householdId)
+                ->where_in('i.status', ['unpaid', 'partial'])
                 ->get()->row()->s ?? 0);
 
-            $unpaid_invoices = (int)($this->db->from('invoices')
-                ->where('household_id', $householdId)
-                ->where_in('status', ['unpaid', 'partial'])
+            $unpaid_invoices = (int)($this->db->from('invoices i')
+                ->where('i.household_id', $householdId)
+                ->where_in('i.status', ['unpaid', 'partial'])
                 ->count_all_results());
         }
 
@@ -503,6 +510,7 @@ class Dashboard extends MY_Controller
 
         if ($this->has_permission('app.home.dashboard.widget.billing')) {
             $useHHFilter = is_array($orgHouseholdIds);
+            $outstandingExpr = $this->invoice_outstanding_expr('i');
 
             $invoiceTitleSelect = "'Tagihan' AS invoice_title";
             $joinChargeTypes = false;
@@ -579,13 +587,13 @@ class Dashboard extends MY_Controller
             });
             $unpaidInvoices = (int)$qbUnpaidInv->count_all_results();
 
-            $qbUnpaidAmt = $this->db->select('COALESCE(SUM(total_amount),0) AS s', false)
-                ->from('invoices')
-                ->where_in('status', ['unpaid', 'partial'])
-                ->where_in('period', $periods);
+            $qbUnpaidAmt = $this->db->select("COALESCE(SUM({$outstandingExpr}),0) AS s", false)
+                ->from('invoices i')
+                ->where_in('i.status', ['unpaid', 'partial'])
+                ->where_in('i.period', $periods);
             $this->qb_if($qbUnpaidAmt, $useHHFilter, function ($q) use ($orgHouseholdIds) {
                 if (!empty($orgHouseholdIds)) {
-                    $q->where_in('household_id', $orgHouseholdIds);
+                    $q->where_in('i.household_id', $orgHouseholdIds);
                 } else {
                     $q->where('1=0', null, false);
                 }
@@ -606,7 +614,7 @@ class Dashboard extends MY_Controller
             $unpaidHouseholds = (int)($qbUnpaidHH->get()->row()->c ?? 0);
 
             $qbLatestInv = $this->db
-                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
+                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -634,7 +642,7 @@ class Dashboard extends MY_Controller
             $latestInvoices = $qbLatestInv->get()->result_array();
 
             $qbTopUnpaid = $this->db
-                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
+                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -648,7 +656,7 @@ class Dashboard extends MY_Controller
             $qbTopUnpaid
                 ->where_in('i.status', ['unpaid', 'partial'])
                 ->where_in('i.period', $periods)
-                ->order_by('i.total_amount', 'desc')
+                ->order_by('outstanding_amount', 'desc')
                 ->limit(5);
 
             $this->qb_if($qbTopUnpaid, $useHHFilter, function ($q) use ($orgHouseholdIds) {
@@ -664,15 +672,15 @@ class Dashboard extends MY_Controller
 
             $aging = $this->billing_aging_all($useHHFilter ? $orgHouseholdIds : null);
 
-            $qbTrend = $this->db->select('period, COALESCE(SUM(total_amount),0) AS amount', false)
-                ->from('invoices')
-                ->where_in('period', $periods)
-                ->where_in('status', ['unpaid', 'partial'])
-                ->group_by('period')
-                ->order_by('period', 'asc');
+            $qbTrend = $this->db->select("i.period, COALESCE(SUM({$outstandingExpr}),0) AS amount", false)
+                ->from('invoices i')
+                ->where_in('i.period', $periods)
+                ->where_in('i.status', ['unpaid', 'partial'])
+                ->group_by('i.period')
+                ->order_by('i.period', 'asc');
             $this->qb_if($qbTrend, $useHHFilter, function ($q) use ($orgHouseholdIds) {
                 if (!empty($orgHouseholdIds)) {
-                    $q->where_in('household_id', $orgHouseholdIds);
+                    $q->where_in('i.household_id', $orgHouseholdIds);
                 } else {
                     $q->where('1=0', null, false);
                 }
@@ -719,7 +727,7 @@ class Dashboard extends MY_Controller
             }
 
             $qbTopHH = $this->db
-                ->select('i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, COUNT(*) AS invoices_count, COALESCE(SUM(i.total_amount),0) AS amount', false)
+                ->select("i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, COUNT(*) AS invoices_count, COALESCE(SUM({$outstandingExpr}),0) AS amount", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -881,15 +889,17 @@ class Dashboard extends MY_Controller
 
             $paidAmount = (float)($qbPaidAmt->get()->row()->s ?? 0);
 
-            $qbHHCount = $this->db->from('households');
+            $qbHHCount = $this->db->select('COUNT(DISTINCT household_id) AS c', false)
+                ->from('invoices')
+                ->where_in('period', $periods);
             $this->qb_if($qbHHCount, $useHHFilter, function ($q) use ($orgHouseholdIds) {
                 if (!empty($orgHouseholdIds)) {
-                    $q->where_in('id', $orgHouseholdIds);
+                    $q->where_in('household_id', $orgHouseholdIds);
                 } else {
                     $q->where('1=0', null, false);
                 }
             });
-            $totalHouseholds = (int)$qbHHCount->count_all_results();
+            $totalHouseholds = (int)($qbHHCount->get()->row()->c ?? 0);
 
             $avgPaidPerHousehold = $totalHouseholds > 0 ? round($paidAmount / $totalHouseholds, 2) : 0.0;
 
@@ -1654,22 +1664,23 @@ class Dashboard extends MY_Controller
 
     private function billing_aging_all(?array $householdIds = null): array
     {
+        $outstandingExpr = $this->invoice_outstanding_expr('i');
         $qb = $this->db->select("
             CASE
-            WHEN DATEDIFF(NOW(), created_at) <= 30 THEN '0–30 hari'
-            WHEN DATEDIFF(NOW(), created_at) <= 90 THEN '31–90 hari'
+            WHEN DATEDIFF(NOW(), i.created_at) <= 30 THEN '0–30 hari'
+            WHEN DATEDIFF(NOW(), i.created_at) <= 90 THEN '31–90 hari'
             ELSE '> 90 hari'
             END AS bucket,
             COUNT(*) AS c,
-            COALESCE(SUM(total_amount),0) AS amount
+            COALESCE(SUM({$outstandingExpr}),0) AS amount
         ", false)
-        ->from('invoices')
-        ->where_in('status', ['unpaid', 'partial'])
+        ->from('invoices i')
+        ->where_in('i.status', ['unpaid', 'partial'])
         ->group_by('bucket');
 
         $this->qb_if($qb, is_array($householdIds), function ($q) use ($householdIds) {
             if (!empty($householdIds)) {
-                $q->where_in('household_id', $householdIds);
+                $q->where_in('i.household_id', $householdIds);
             } else {
                 $q->where('1=0', null, false);
             }
