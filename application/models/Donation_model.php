@@ -151,7 +151,7 @@ class Donation_model extends MY_Model
             'meta' => ['page' => $page, 'per_page' => $per, 'total' => $total],
             'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
             'has_prev' => ($page > 1),
-            'has_next' => ($page < ($per > 0 ? (int)ceil($total / per) : 0)),
+            'has_next' => ($page < ($per > 0 ? (int)ceil($total / $per) : 0)),
         ];
     }
 

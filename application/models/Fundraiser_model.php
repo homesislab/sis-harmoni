@@ -6,13 +6,34 @@ class Fundraiser_model extends MY_Model
 {
     protected string $table_name = 'fundraisers';
 
+    protected function get_ledger_model()
+    {
+        $CI =& get_instance();
+        $CI->load->model('Ledger_model', 'LedgerModel');
+        return $CI->LedgerModel;
+    }
+
     public function validate_payload(array $in, bool $is_create): array
     {
         $err = [];
         if ($is_create) {
-            foreach (['title','category'] as $f) {
+            foreach (['title','ledger_account_id'] as $f) {
                 if (!isset($in[$f]) || trim((string)$in[$f]) === '') {
                     $err[$f] = 'Wajib diisi';
+                }
+            }
+        }
+
+        if (array_key_exists('ledger_account_id', $in)) {
+            $ledger_account_id = (int)$in['ledger_account_id'];
+            if ($ledger_account_id <= 0) {
+                $err['ledger_account_id'] = 'Wajib diisi';
+            } else {
+                $acc = $this->get_ledger_model()->find_account($ledger_account_id);
+                if (!$acc) {
+                    $err['ledger_account_id'] = 'Akun kas tidak ditemukan';
+                } elseif (isset($in['category']) && trim((string)$in['category']) !== '' && trim((string)$in['category']) !== (string)$acc['type']) {
+                    $err['ledger_account_id'] = 'Akun kas tidak sesuai unit yang dipilih';
                 }
             }
         }
@@ -40,32 +61,50 @@ class Fundraiser_model extends MY_Model
 
     public function find_by_id(int $id): ?array
     {
-        $row = $this->db->get_where('fundraisers', ['id' => $id])->row_array();
+        $row = $this->db
+            ->select('f.*, la.name AS ledger_account_name, la.type AS ledger_account_type')
+            ->from('fundraisers f')
+            ->join('ledger_accounts la', 'la.id = f.ledger_account_id', 'left')
+            ->where('f.id', $id)
+            ->get()->row_array();
         return $row ?: null;
     }
 
     public function create(array $in): int
     {
+        $acc = $this->get_ledger_model()->find_account((int)$in['ledger_account_id']);
+        $category = trim((string)($acc['type'] ?? ($in['category'] ?? '')));
+
         $this->db->insert('fundraisers', [
             'title' => trim((string)$in['title']),
             'description' => isset($in['description']) ? (string)$in['description'] : null,
             'target_amount' => isset($in['target_amount']) ? (float)$in['target_amount'] : 0,
             'collected_amount' => 0,
             'status' => isset($in['status']) ? trim((string)$in['status']) : 'active',
-            'category' => trim((string)$in['category']),
+            'category' => $category,
+            'ledger_account_id' => (int)$in['ledger_account_id'],
         ]);
         return (int)$this->db->insert_id();
     }
 
     public function update(int $id, array $in): void
     {
-        $allowed = ['title','description','target_amount','status','category'];
+        $allowed = ['title','description','target_amount','status'];
         $upd = [];
         foreach ($allowed as $k) {
             if (array_key_exists($k, $in)) {
                 $upd[$k] = is_string($in[$k]) ? trim((string)$in[$k]) : $in[$k];
             }
         }
+
+        if (array_key_exists('ledger_account_id', $in)) {
+            $acc = $this->get_ledger_model()->find_account((int)$in['ledger_account_id']);
+            $upd['ledger_account_id'] = (int)$in['ledger_account_id'];
+            $upd['category'] = trim((string)($acc['type'] ?? ($in['category'] ?? '')));
+        } elseif (array_key_exists('category', $in)) {
+            $upd['category'] = trim((string)$in['category']);
+        }
+
         if ($upd) {
             $this->db->where('id', $id)->update('fundraisers', $upd);
         }
@@ -92,7 +131,8 @@ class Fundraiser_model extends MY_Model
     {
         $offset = ($page - 1) * $per;
 
-        $qb = $this->db->from('fundraisers f');
+        $qb = $this->db->from('fundraisers f')
+            ->join('ledger_accounts la', 'la.id = f.ledger_account_id', 'left');
 
         if (!empty($filters['category'])) {
             $qb->where('f.category', (string)$filters['category']);
@@ -111,7 +151,7 @@ class Fundraiser_model extends MY_Model
 
         $total = (int)$qb->count_all_results('', false);
 
-        $items = $qb->select('f.*')
+        $items = $qb->select('f.*, la.name AS ledger_account_name, la.type AS ledger_account_type')
             ->order_by('f.created_at', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();

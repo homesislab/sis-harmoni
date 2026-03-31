@@ -68,7 +68,10 @@ class FundraiserDonations extends MY_Controller
         $this->db->trans_begin();
 
         try {
-            $ledger_account_id = $this->LedgerModel->ensure_default_account($fund['category']);
+            $ledger_account_id = (int)($fund['ledger_account_id'] ?? 0);
+            if ($ledger_account_id <= 0) {
+                $ledger_account_id = $this->LedgerModel->ensure_default_account((string)$fund['category']);
+            }
 
             $ledger_entry_id = $this->LedgerModel->create_entry([
                 'ledger_account_id' => $ledger_account_id,

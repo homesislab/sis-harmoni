@@ -6,6 +6,13 @@ class Charge_model extends MY_Model
 {
     protected string $table_name = 'charge_types';
 
+    protected function get_ledger_model()
+    {
+        $CI =& get_instance();
+        $CI->load->model('Ledger_model', 'LedgerModel');
+        return $CI->LedgerModel;
+    }
+
     public function validate_type(array $in, bool $is_create): array
     {
         $err = [];
@@ -118,6 +125,26 @@ class Charge_model extends MY_Model
             $lid = (int)$in['ledger_account_id'];
             if ($lid <= 0) {
                 $err['ledger_account_id'] = 'Wajib dipilih';
+            } else {
+                $acc = $this->get_ledger_model()->find_account($lid);
+                if (!$acc) {
+                    $err['ledger_account_id'] = 'Akun kas tidak ditemukan';
+                } else {
+                    $chargeType = null;
+
+                    if (!empty($in['charge_type_id'])) {
+                        $chargeType = $this->find_type((int)$in['charge_type_id']);
+                    } elseif (!empty($in['id'])) {
+                        $component = $this->find_component((int)$in['id']);
+                        if ($component) {
+                            $chargeType = $this->find_type((int)$component['charge_type_id']);
+                        }
+                    }
+
+                    if ($chargeType && !empty($chargeType['category']) && (string)$acc['type'] !== (string)$chargeType['category']) {
+                        $err['ledger_account_id'] = 'Akun kas harus sesuai unit pengelola jenis iuran';
+                    }
+                }
             }
         }
 

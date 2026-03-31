@@ -59,6 +59,7 @@ class ChargeComponents extends MY_Controller
         }
 
         $in = $this->json_input();
+        $in['id'] = $id;
         $err = $this->ChargeModel->validate_component($in, false);
         if ($err) {
             api_validation_error($err);
