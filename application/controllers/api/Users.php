@@ -83,7 +83,7 @@ class Users extends MY_Controller
             'status' => $status,
         ]);
 
-        $role_codes = $in['role_codes'] ?? ['resident'];
+        $role_codes = $in['role_codes'] ?? ['warga'];
         foreach ((array)$role_codes as $rc) {
             $this->UserModel->assign_role_code($id, (string)$rc);
         }

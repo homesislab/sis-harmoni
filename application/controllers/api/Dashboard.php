@@ -33,6 +33,16 @@ class Dashboard extends MY_Controller
         return $qb;
     }
 
+    private function has_any_permission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->has_permission((string)$permission)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private function invoice_outstanding_expr(string $invoiceAlias = 'i'): string
     {
         $invoiceAlias = preg_replace('/[^a-zA-Z0-9_]/', '', $invoiceAlias) ?: 'i';
@@ -337,7 +347,11 @@ class Dashboard extends MY_Controller
 
         $filterLedgerByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'ledger_accounts'));
 
-        if ($this->has_permission('app.home.dashboard.widget.finance') || $this->has_permission('app.home.dashboard.widget.ledger')) {
+        $canFinanceScope = $scope === 'dkm'
+            ? $this->has_permission('app.home.dashboard.finance.dkm')
+            : $this->has_permission('app.home.dashboard.finance.paguyuban');
+
+        if ($canFinanceScope) {
             $qbBal = $this->db->select('COALESCE(SUM(balance),0) AS s', false)
                 ->from('ledger_accounts')
                 ->where('type', $scope)
@@ -438,57 +452,6 @@ class Dashboard extends MY_Controller
 
             $out['finance'] = $financeSummary;
 
-            if ($this->has_permission('app.home.dashboard.widget.ledger')) {
-                $qbAcc = $this->db->select('id, name, type, balance')
-                    ->from('ledger_accounts')
-                    ->where('type', $scope)
-                    ->where('deleted_at IS NULL', null, false)
-                    ->order_by('name', 'asc');
-
-                $this->qb_if($qbAcc, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
-                    $q->where('org_unit_id', $orgUnitId);
-                });
-
-                $accounts = $qbAcc->get()->result_array();
-
-                $qbEnt = $this->db->select('e.id, e.direction, e.amount, e.category, e.description, e.occurred_at, e.source_type, e.source_id, a.name AS ledger_account_name')
-                    ->from('ledger_entries e')
-                    ->join('ledger_accounts a', 'a.id = e.ledger_account_id', 'inner')
-                    ->where('a.type', $scope)
-                    ->where('a.deleted_at IS NULL', null, false)
-                    ->where('e.occurred_at >=', $fromTs)
-                    ->where('e.occurred_at <=', $toTs)
-                    ->order_by('e.occurred_at', 'desc')
-                    ->limit(10);
-
-                $this->qb_if($qbEnt, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
-                    $q->where('a.org_unit_id', $orgUnitId);
-                });
-
-                $entries = $qbEnt->get()->result_array();
-
-                $qbCnt = $this->db->from('ledger_entries e')
-                    ->join('ledger_accounts a', 'a.id = e.ledger_account_id', 'inner')
-                    ->where('a.type', $scope)
-                    ->where('a.deleted_at IS NULL', null, false)
-                    ->where('e.occurred_at >=', $fromTs)
-                    ->where('e.occurred_at <=', $toTs);
-
-                $this->qb_if($qbCnt, $filterLedgerByOrg, function ($q) use ($orgUnitId) {
-                    $q->where('a.org_unit_id', $orgUnitId);
-                });
-
-                $entriesCount = (int)$qbCnt->count_all_results();
-
-                $out['ledger'] = [
-                    'balance_scope' => $balance,
-                    'income' => $income,
-                    'expense' => $expense,
-                    'entries_count' => $entriesCount,
-                    'accounts' => $accounts,
-                    'entries_latest' => $entries,
-                ];
-            }
         }
 
         $billingSummary = [
@@ -508,7 +471,21 @@ class Dashboard extends MY_Controller
             'payments_latest' => [],
         ];
 
-        if ($this->has_permission('app.home.dashboard.widget.billing')) {
+        $canBilling = $this->has_any_permission([
+            'app.home.dashboard.overview.action_needed',
+            'app.home.dashboard.overview.unpaid_invoices',
+            'app.home.dashboard.overview.payments_pending',
+            'app.home.dashboard.billing.total_invoices',
+            'app.home.dashboard.billing.paid_invoices',
+            'app.home.dashboard.billing.unpaid_amount',
+            'app.home.dashboard.billing.avg_paid_per_household',
+            'app.home.dashboard.billing.aging_unpaid',
+            'app.home.dashboard.billing.collection_priority',
+            'app.home.dashboard.billing.latest_invoices',
+            'app.home.dashboard.billing.latest_payments',
+        ]);
+
+        if ($canBilling) {
             $useHHFilter = is_array($orgHouseholdIds);
             $outstandingExpr = $this->invoice_outstanding_expr('i');
 
@@ -901,7 +878,7 @@ class Dashboard extends MY_Controller
             });
             $totalHouseholds = (int)($qbHHCount->get()->row()->c ?? 0);
 
-            $avgPaidPerHousehold = $totalHouseholds > 0 ? round($paidAmount / $totalHouseholds, 2) : 0.0;
+            $avgPaidPerHousehold = $invoicePaid > 0 ? round($paidAmount / $invoicePaid, 2) : 0.0;
 
             $normHousehold = function ($kk, $block = null, $number = null, $headName = null) {
                 $kk = (string)($kk ?? '');
@@ -1055,7 +1032,13 @@ class Dashboard extends MY_Controller
             'invoices_status_monthly' => $billingSummary['invoices_status_monthly'] ?? [],
         ];
 
-        if ($this->has_permission('app.home.dashboard.widget.residents')) {
+        $canResidents = $this->has_any_permission([
+            'app.home.dashboard.overview.houses',
+            'app.home.dashboard.community.houses',
+            'app.home.dashboard.community.residents',
+        ]);
+
+        if ($canResidents) {
             $useHouseFilter = is_array($orgHouseIds);
             $useHHFilter = is_array($orgHouseholdIds);
 
@@ -1187,7 +1170,13 @@ class Dashboard extends MY_Controller
             ];
         }
 
-        if ($this->has_permission('app.home.dashboard.widget.security')) {
+        $canSecurity = $this->has_any_permission([
+            'app.home.dashboard.overview.action_needed',
+            'app.home.dashboard.community.emergencies',
+            'app.home.dashboard.community.feedback',
+        ]);
+
+        if ($canSecurity) {
             $useHouseFilter = is_array($orgHouseIds);
 
             $qbEmOpen = $this->db->from('emergency_reports')
@@ -1355,7 +1344,11 @@ class Dashboard extends MY_Controller
             ];
         }
 
-        if ($this->has_permission('app.home.dashboard.widget.content')) {
+        $canContent = $this->has_any_permission([
+            'app.home.dashboard.community.polls_active',
+        ]);
+
+        if ($canContent) {
             $now = date('Y-m-d H:i:s');
             $eventsUpcoming = $this->db->select('id, title, event_at, location')
                 ->from('events')
@@ -1446,7 +1439,13 @@ class Dashboard extends MY_Controller
             ];
         }
 
-        if ($this->has_permission('app.home.dashboard.widget.market')) {
+        $canMarket = $this->has_any_permission([
+            'app.home.dashboard.overview.action_needed',
+            'app.home.dashboard.overview.business_active',
+            'app.home.dashboard.community.businesses',
+        ]);
+
+        if ($canMarket) {
             $filterBizByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'local_businesses'));
             $filterProdByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'local_products'));
 
@@ -1504,7 +1503,7 @@ class Dashboard extends MY_Controller
             ];
         }
 
-        if ($this->has_permission('app.home.dashboard.widget.inventory')) {
+        if ($this->has_permission('app.home.dashboard.community.inventories')) {
             $filterInvByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'inventories'));
 
             $qb = $this->db->from('inventories');
@@ -1549,12 +1548,16 @@ class Dashboard extends MY_Controller
             ];
         }
 
-        if ($this->has_permission('app.home.dashboard.widget.donation')) {
+        $canDonation = $this->has_any_permission([
+            'app.home.dashboard.overview.action_needed',
+            'app.home.dashboard.community.donations',
+        ]);
+
+        if ($canDonation) {
             $filterFundByOrg = ($orgUnitId !== '' && $this->db->field_exists('org_unit_id', 'fundraisers'));
 
             $qbFundActive = $this->db->from('fundraisers')
-                ->where('status', 'active')
-                ->where('category', $scope);
+                ->where('status', 'active');
             $this->qb_if($qbFundActive, $filterFundByOrg, function ($q) use ($orgUnitId) {
                 $q->where('org_unit_id', $orgUnitId);
             });
@@ -1564,7 +1567,6 @@ class Dashboard extends MY_Controller
                 ->from('fundraiser_donations d')
                 ->join('fundraisers f', 'f.id = d.fundraiser_id', 'left')
                 ->where('d.status', 'approved')
-                ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
             $this->qb_if($qbDonTotal, $filterFundByOrg, function ($q) use ($orgUnitId) {
@@ -1574,7 +1576,6 @@ class Dashboard extends MY_Controller
 
             $qbDonCount = $this->db->from('fundraiser_donations d')
                 ->join('fundraisers f', 'f.id = d.fundraiser_id', 'left')
-                ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
             $this->qb_if($qbDonCount, $filterFundByOrg, function ($q) use ($orgUnitId) {
@@ -1585,7 +1586,6 @@ class Dashboard extends MY_Controller
             $qbDonPending = $this->db->from('fundraiser_donations d')
                 ->join('fundraisers f', 'f.id = d.fundraiser_id', 'left')
                 ->where('d.status', 'pending')
-                ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs);
             $this->qb_if($qbDonPending, $filterFundByOrg, function ($q) use ($orgUnitId) {
@@ -1596,7 +1596,6 @@ class Dashboard extends MY_Controller
             $qbDonLatest = $this->db->select('d.id, d.fundraiser_id, f.title AS fundraiser_title, d.amount, d.paid_at, d.status')
                 ->from('fundraiser_donations d')
                 ->join('fundraisers f', 'f.id = d.fundraiser_id', 'left')
-                ->where('f.category', $scope)
                 ->where('d.paid_at >=', $fromTs)
                 ->where('d.paid_at <=', $toTs)
                 ->order_by('d.paid_at', 'desc')
@@ -1610,7 +1609,6 @@ class Dashboard extends MY_Controller
                 ->from('fundraisers f')
                 ->join('fundraiser_donations d', 'd.fundraiser_id = f.id AND d.status = "approved"', 'left', false)
                 ->where('f.status', 'active')
-                ->where('f.category', $scope)
                 ->group_by('f.id')
                 ->order_by('amount', 'desc')
                 ->limit(5);
@@ -1624,7 +1622,6 @@ class Dashboard extends MY_Controller
                 $qbUpd = $this->db->select('u.id, u.fundraiser_id, f.title AS fundraiser_title, u.title, u.created_at')
                     ->from('fundraiser_updates u')
                     ->join('fundraisers f', 'f.id = u.fundraiser_id', 'left')
-                    ->where('f.category', $scope)
                     ->order_by('u.id', 'desc')
                     ->limit(10);
                 $this->qb_if($qbUpd, $filterFundByOrg, function ($q) use ($orgUnitId) {

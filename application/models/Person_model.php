@@ -6,6 +6,71 @@ class Person_model extends MY_Model
 {
     protected string $table_name = 'persons';
 
+    private function apply_paginate_search($qb, string $q)
+    {
+        if ($q !== '') {
+            $qb->group_start()
+                ->like('p.full_name', $q)
+                ->or_like('p.nik', $q)
+                ->or_like('p.phone', $q)
+                ->group_end();
+        }
+
+        return $qb;
+    }
+
+    private function base_paginate_query(string $q = '')
+    {
+        $qb = $this->db
+            ->select("
+                p.*,
+
+                (
+                    SELECT hm.household_id
+                    FROM household_members hm
+                    WHERE hm.person_id = p.id
+                    ORDER BY hm.id DESC
+                    LIMIT 1
+                ) AS household_id,
+
+                (
+                    SELECT h.kk_number
+                    FROM household_members hm2
+                    JOIN households h ON h.id = hm2.household_id
+                    WHERE hm2.person_id = p.id
+                    ORDER BY hm2.id DESC
+                    LIMIT 1
+                ) AS kk_number,
+
+                (
+                    SELECT hm3.relationship
+                    FROM household_members hm3
+                    WHERE hm3.person_id = p.id
+                    ORDER BY hm3.id DESC
+                    LIMIT 1
+                ) AS relationship,
+
+                (
+                    SELECT hs.code
+                    FROM house_occupancies oc
+                    JOIN houses hs ON hs.id = oc.house_id
+                    WHERE oc.status = 'active'
+                    AND oc.household_id = (
+                        SELECT hm4.household_id
+                        FROM household_members hm4
+                        WHERE hm4.person_id = p.id
+                        ORDER BY hm4.id DESC
+                        LIMIT 1
+                    )
+                    ORDER BY oc.start_date DESC, oc.id DESC
+                    LIMIT 1
+                ) AS unit_code
+            ", false)
+            ->from('persons p');
+
+        return $this->apply_paginate_search($qb, $q);
+    }
+
     public function find_by_id(int $id): ?array
     {
         $row = $this->db->get_where('persons', ['id' => $id])->row_array();
@@ -119,69 +184,21 @@ class Person_model extends MY_Model
         $per = max(1, min(100, $per));
         $offset = ($page - 1) * $per;
 
-        $qb = $this->db
-            ->select("
-                p.*,
-
-                -- household_id (terbaru)
-                (
-                    SELECT hm.household_id
-                    FROM household_members hm
-                    WHERE hm.person_id = p.id
-                    ORDER BY hm.id DESC
-                    LIMIT 1
-                ) AS household_id,
-
-                -- kk_number
-                (
-                    SELECT h.kk_number
-                    FROM household_members hm2
-                    JOIN households h ON h.id = hm2.household_id
-                    WHERE hm2.person_id = p.id
-                    ORDER BY hm2.id DESC
-                    LIMIT 1
-                ) AS kk_number,
-
-                -- relationship
-                (
-                    SELECT hm3.relationship
-                    FROM household_members hm3
-                    WHERE hm3.person_id = p.id
-                    ORDER BY hm3.id DESC
-                    LIMIT 1
-                ) AS relationship,
-
-                -- unit_code: ambil unit dari occupancy aktif household terbaru (urut terbaru: start_date, id)
-                (
-                    SELECT hs.code
-                    FROM house_occupancies oc
-                    JOIN houses hs ON hs.id = oc.house_id
-                    WHERE oc.status = 'active'
-                    AND oc.household_id = (
-                        SELECT hm4.household_id
-                        FROM household_members hm4
-                        WHERE hm4.person_id = p.id
-                        ORDER BY hm4.id DESC
-                        LIMIT 1
-                    )
-                    ORDER BY oc.start_date DESC, oc.id DESC
-                    LIMIT 1
-                ) AS unit_code
-            ", false)
+        $totalQ = $this->db
             ->from('persons p');
+        $totalQ = $this->apply_paginate_search($totalQ, $q);
+        $total = (int)$totalQ->count_all_results();
 
-        if ($q !== '') {
-            $qb->group_start()
-                ->like('p.full_name', $q)
-                ->or_like('p.nik', $q)
-                ->or_like('p.phone', $q)
-                ->group_end();
-        }
+        $householdsQ = $this->db
+            ->select('COUNT(DISTINCT hm.household_id) AS c', false)
+            ->from('persons p')
+            ->join('household_members hm', 'hm.person_id = p.id', 'inner');
+        $householdsQ = $this->apply_paginate_search($householdsQ, $q);
 
-        $countQ = clone $qb;
-        $total = (int)$countQ->count_all_results('', false);
+        $householdsTotal = (int)($householdsQ->get()->row()->c ?? 0);
 
-        $items = $qb->order_by('p.id', 'DESC')
+        $itemsQ = $this->base_paginate_query($q);
+        $items = $itemsQ->order_by('p.id', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();
 
@@ -191,6 +208,7 @@ class Person_model extends MY_Model
                 'page' => $page,
                 'per_page' => $per,
                 'total' => $total,
+                'households_total' => $householdsTotal,
                 'total_pages' => ($per > 0 ? (int)ceil($total / $per) : 0),
                 'has_prev' => $page > 1,
                 'has_next' => $page < ($per > 0 ? (int)ceil($total / $per) : 0),

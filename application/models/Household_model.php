@@ -127,17 +127,29 @@ class Household_model extends MY_Model
         $offset = ($page - 1) * $per;
 
         $qb = $this->db->from('households h')
-            ->join('persons p', 'p.id = h.head_person_id', 'left');
+            ->join('persons p', 'p.id = h.head_person_id', 'left')
+            ->join('house_occupancies ho', 'ho.household_id = h.id AND ho.status = "active"', 'left')
+            ->join('houses hs', 'hs.id = ho.house_id', 'left');
 
         if ($q !== '') {
             $qb->group_start()
                ->like('h.kk_number', $q)
+               ->or_like('p.full_name', $q)
+               ->or_like('hs.block', $q)
+               ->or_like('hs.number', $q)
                ->group_end();
         }
 
         $total = (int)$qb->count_all_results('', false);
 
-        $items = $qb->select('h.*, p.full_name AS head_person_name')
+        $items = $qb->select("
+                        h.*,
+                        p.full_name AS head_person_name,
+                        p.full_name AS head_name,
+                        hs.block AS house_block,
+                        hs.number AS house_number,
+                        CONCAT(hs.block, '-', hs.number) AS unit_code
+                    ", false)
                     ->order_by('h.id', 'DESC')
                     ->limit($per, $offset)
                     ->get()->result_array();
@@ -158,15 +170,29 @@ class Household_model extends MY_Model
         $qb = $this->db->from('households h')
             ->join('household_members hm', 'hm.household_id = h.id', 'inner')
             ->join('persons p', 'p.id = h.head_person_id', 'left')
+            ->join('house_occupancies ho', 'ho.household_id = h.id AND ho.status = "active"', 'left')
+            ->join('houses hs', 'hs.id = ho.house_id', 'left')
             ->where('hm.person_id', $person_id);
 
         if ($q !== '') {
-            $qb->like('h.kk_number', $q);
+            $qb->group_start()
+                ->like('h.kk_number', $q)
+                ->or_like('p.full_name', $q)
+                ->or_like('hs.block', $q)
+                ->or_like('hs.number', $q)
+                ->group_end();
         }
 
         $total = (int)$qb->count_all_results('', false);
 
-        $items = $qb->select('h.*, p.full_name AS head_person_name')
+        $items = $qb->select("
+                h.*,
+                p.full_name AS head_person_name,
+                p.full_name AS head_name,
+                hs.block AS house_block,
+                hs.number AS house_number,
+                CONCAT(hs.block, '-', hs.number) AS unit_code
+            ", false)
             ->order_by('h.id', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();

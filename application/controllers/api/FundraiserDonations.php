@@ -12,7 +12,6 @@ class FundraiserDonations extends MY_Controller
         $this->load->model('Fundraiser_model', 'FundraiserModel');
         $this->load->model('Donation_model', 'DonationModel');
         $this->load->model('Ledger_model', 'LedgerModel');
-        $this->load->library('whatsapp');
     }
 
     public function index_admin(): void
@@ -77,8 +76,8 @@ class FundraiserDonations extends MY_Controller
                 'ledger_account_id' => $ledger_account_id,
                 'direction' => 'in',
                 'amount' => (float)$don['amount'],
-                'category' => 'fundraiser_donation',
-                'description' => 'Donasi fundraiser #' . $don['fundraiser_id'] . ' - ' . $fund['title'],
+                'category' => 'Donasi Program',
+                'description' => $this->_build_donation_ledger_description($don, $fund),
                 'occurred_at' => $don['paid_at'],
                 'source_type' => 'fundraiser_donation',
                 'source_id' => (int)$don['id'],
@@ -100,17 +99,6 @@ class FundraiserDonations extends MY_Controller
             }
             $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
             audit_log($this, 'Menyetujui donasi', 'Menyetujui donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
-
-            // Send WA Notification
-            $person_id = (int)($don['person_id'] ?? 0);
-            if ($person_id > 0) {
-                $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
-                if ($pRow && !empty($pRow['phone'])) {
-                    $nama = $pRow['full_name'] ?? 'Warga';
-                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, donasi Anda sebesar *Rp {$amt}* untuk program *{$fundTitle}* telah diterima dengan baik.\n\nJazakumullah khairan katsiran atas partisipasi Anda, semoga menjadi amal jariyah dan membawa keberkahan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-                    $this->whatsapp->send_message($pRow['phone'], $wa_msg);
-                }
-            }
 
             api_ok(null, ['message' => 'Donation disetujui', 'ledger_entry_id' => $ledger_entry_id]);
         } catch (Throwable $e) {
@@ -154,17 +142,23 @@ class FundraiserDonations extends MY_Controller
         $amt = number_format((float)($don['amount'] ?? 0), 0, ',', '.');
         audit_log($this, 'Menolak donasi', 'Menolak donasi Rp ' . $amt . ' untuk "' . $fundTitle . '" dari ' . $donor);
 
-        // Send WA Notification
-        $person_id = (int)($don['person_id'] ?? 0);
-        if ($person_id > 0) {
-            $pRow = $this->db->get_where('persons', ['id' => $person_id])->row_array();
-            if ($pRow && !empty($pRow['phone'])) {
-                $nama = $pRow['full_name'] ?? 'Warga';
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas konfirmasi donasi sebesar *Rp {$amt}* untuk program *{$fundTitle}*.\nNamun, untuk saat ini konfirmasi belum dapat diproses dengan alasan berikut:\n\n{$note}\n\nSilakan dicek kembali informasinya atau komunikasikan dengan pengurus apabila terdapat kendala.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-                $this->whatsapp->send_message($pRow['phone'], $wa_msg);
-            }
+        api_ok(null, ['message' => 'Donation ditolak']);
+    }
+
+    private function _build_donation_ledger_description(array $don, array $fund): string
+    {
+        $title = trim((string)($fund['title'] ?? ($don['fundraiser_title'] ?? 'Program donasi')));
+        if ($title === '') {
+            $title = 'Program donasi';
         }
 
-        api_ok(null, ['message' => 'Donation ditolak']);
+        $donor = ((int)($don['is_anonymous'] ?? 0) === 1)
+            ? 'Hamba Allah'
+            : trim((string)($don['full_name'] ?? ''));
+        if ($donor === '') {
+            $donor = 'Donatur';
+        }
+
+        return 'Donasi untuk "' . $title . '" dari ' . $donor;
     }
 }

@@ -42,6 +42,7 @@ class LedgerEntries extends MY_Controller
         $in = $this->json_input();
 
         $ledger_account_id = (int)($in['ledger_account_id'] ?? ($in['account_id'] ?? 0));
+        $transfer_to_ledger_account_id = (int)($in['transfer_to_ledger_account_id'] ?? 0);
         $direction = (string)($in['direction'] ?? ($in['type'] ?? ''));
         $amount = (float)($in['amount'] ?? 0);
         $occurred_at = trim((string)($in['occurred_at'] ?? ($in['entry_date'] ?? '')));
@@ -67,8 +68,81 @@ class LedgerEntries extends MY_Controller
             $occurred_at = date('Y-m-d H:i:s');
         }
 
+        if ($transfer_to_ledger_account_id > 0) {
+            if ($ledger_account_id <= 0) {
+                $fields['ledger_account_id'] = 'Akun asal wajib diisi';
+            }
+            if ($transfer_to_ledger_account_id <= 0) {
+                $fields['transfer_to_ledger_account_id'] = 'Akun tujuan wajib diisi';
+            }
+            if ($ledger_account_id > 0 && $ledger_account_id === $transfer_to_ledger_account_id) {
+                $fields['transfer_to_ledger_account_id'] = 'Akun tujuan harus berbeda';
+            }
+        }
+
         if (!empty($fields)) {
             api_validation_error($fields);
+            return;
+        }
+
+        if ($transfer_to_ledger_account_id > 0) {
+            $from = $this->LedgerModel->find_account($ledger_account_id);
+            $to = $this->LedgerModel->find_account($transfer_to_ledger_account_id);
+
+            if (!$from) {
+                api_validation_error(['ledger_account_id' => 'Akun asal tidak ditemukan']);
+                return;
+            }
+            if (!$to) {
+                api_validation_error(['transfer_to_ledger_account_id' => 'Akun tujuan tidak ditemukan']);
+                return;
+            }
+            if (($from['type'] ?? null) !== ($to['type'] ?? null)) {
+                api_validation_error(['transfer_to_ledger_account_id' => 'Mutasi antar kas harus dalam unit pengelola yang sama']);
+                return;
+            }
+
+            $baseDescription = trim((string)($in['description'] ?? ($in['note'] ?? '')));
+            $outDescription = $baseDescription !== ''
+                ? $baseDescription . ' | ke ' . ($to['name'] ?? ('Akun #' . $transfer_to_ledger_account_id))
+                : 'Mutasi ke ' . ($to['name'] ?? ('Akun #' . $transfer_to_ledger_account_id));
+            $inDescription = $baseDescription !== ''
+                ? $baseDescription . ' | dari ' . ($from['name'] ?? ('Akun #' . $ledger_account_id))
+                : 'Mutasi dari ' . ($from['name'] ?? ('Akun #' . $ledger_account_id));
+
+            $this->db->trans_start();
+
+            $outId = $this->LedgerModel->create_entry([
+                'ledger_account_id' => $ledger_account_id,
+                'direction' => 'out',
+                'amount' => $amount,
+                'category' => 'Mutasi Antar Kas',
+                'description' => $outDescription,
+                'occurred_at' => $occurred_at,
+                'source_type' => 'ledger_transfer',
+                'source_id' => null,
+                'created_by' => (int)($this->auth_user['id'] ?? 0),
+            ]);
+
+            $inId = $this->LedgerModel->create_entry([
+                'ledger_account_id' => $transfer_to_ledger_account_id,
+                'direction' => 'in',
+                'amount' => $amount,
+                'category' => 'Mutasi Antar Kas',
+                'description' => $inDescription,
+                'occurred_at' => $occurred_at,
+                'source_type' => 'ledger_transfer',
+                'source_id' => null,
+                'created_by' => (int)($this->auth_user['id'] ?? 0),
+            ]);
+
+            $this->db->trans_complete();
+
+            api_ok([
+                'transfer' => true,
+                'out_entry_id' => (int)$outId,
+                'in_entry_id' => (int)$inId,
+            ], null, 201);
             return;
         }
 

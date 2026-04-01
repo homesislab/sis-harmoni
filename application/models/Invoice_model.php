@@ -152,20 +152,45 @@ class Invoice_model extends MY_Model
             ct.name as charge_name,
             ct.category as charge_category,
             p.full_name as head_name,
-            CONCAT(h.block, '-', h.number) as house_code
+            CONCAT(h.block, '-', h.number) as house_code,
+            MAX(CASE WHEN pay.status='pending' THEN pay.id ELSE NULL END) as pending_payment_id,
+            SUM(CASE WHEN pay.status='pending' THEN 1 ELSE 0 END) as pending_payment_count,
+            SUBSTRING_INDEX(GROUP_CONCAT(pay.status ORDER BY pay.id DESC), ',', 1) as last_payment_status,
+            SUBSTRING_INDEX(GROUP_CONCAT(pay.note ORDER BY pay.id DESC SEPARATOR '||'), '||', 1) as last_payment_note
         ", false)
         ->from('invoices i')
         ->join('charge_types ct', 'ct.id=i.charge_type_id', 'left')
         ->join('households hh', 'hh.id=i.household_id', 'left')
         ->join('persons p', 'p.id=hh.head_person_id', 'left')
         ->join('house_occupancies ho', 'ho.household_id = i.household_id AND ho.status = "active"', 'left')
-        ->join('houses h', 'h.id = ho.house_id', 'left');
+        ->join('houses h', 'h.id = ho.house_id', 'left')
+        ->join('payment_invoice_intents pii', 'pii.invoice_id=i.id', 'left')
+        ->join('payments pay', 'pay.id=pii.payment_id', 'left')
+        ->group_by('i.id');
 
         if (!empty($filters['household_id'])) {
             $q->where('i.household_id', (int)$filters['household_id']);
         }
         if (!empty($filters['status'])) {
-            $q->where('i.status', $filters['status']);
+            $st = (string)$filters['status'];
+            if ($st === 'paid') {
+                $q->where('i.status', 'paid');
+            } elseif ($st === 'void') {
+                $q->where('i.status', 'void');
+            } elseif ($st === 'pending') {
+                $q->where_not_in('i.status', ['paid', 'void']);
+                $q->having('pending_payment_count >', 0);
+            } elseif ($st === 'rejected') {
+                $q->where_not_in('i.status', ['paid', 'void']);
+                $q->having('pending_payment_count =', 0);
+                $q->having('last_payment_status', 'rejected');
+            } elseif ($st === 'unpaid') {
+                $q->where_not_in('i.status', ['paid', 'void']);
+                $q->having('pending_payment_count =', 0);
+                $q->having('(last_payment_status IS NULL OR last_payment_status <> \'rejected\')', null, false);
+            } else {
+                $q->where('i.status', $st);
+            }
         }
         if (!empty($filters['period'])) {
             $q->where('i.period', $filters['period']);
@@ -175,6 +200,20 @@ class Invoice_model extends MY_Model
         }
         if (!empty($filters['charge_type_id'])) {
             $q->where('i.charge_type_id', (int)$filters['charge_type_id']);
+        }
+        if (!empty($filters['q'])) {
+            $s = trim((string)$filters['q']);
+            if ($s !== '') {
+                $q->group_start()
+                    ->like('ct.name', $s)
+                    ->or_like('i.period', $s)
+                    ->or_like('i.id', $s)
+                    ->or_like('p.full_name', $s)
+                    ->or_like('h.block', $s)
+                    ->or_like('h.number', $s)
+                    ->or_like('pay.status', $s)
+                    ->group_end();
+            }
         }
 
         $totalQ = clone $q;

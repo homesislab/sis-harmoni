@@ -32,6 +32,8 @@ $route['api/v1/auth/login']['POST']   = 'api/Auth/login';
 $route['api/v1/auth/me']['GET']       = 'api/Auth/me';
 $route['api/v1/auth/me']['PUT']       = 'api/Auth/update_me';
 $route['api/v1/auth/logout']['POST']  = 'api/Auth/logout';
+$route['api/v1/fcm/token']['POST']    = 'api/Fcm/token';
+$route['api/v1/fcm/token']['DELETE']  = 'api/Fcm/destroy_token';
 
 /* =========================================================
  * Profile
@@ -141,6 +143,7 @@ $route['api/v1/my/invoices/preview']['POST']  = 'api/MyInvoices/preview';
  * ======================================================= */
 $route['api/v1/payments']['GET']                    = 'api/Payments/index';
 $route['api/v1/payments']['POST']                   = 'api/Payments/store';
+$route['api/v1/payments/manual']['POST']            = 'api/Payments/manual_store';
 $route['api/v1/payments/(:num)']['GET']             = 'api/Payments/show/$1';
 $route['api/v1/payments/(:num)/approve']['POST']    = 'api/Payments/approve/$1';
 $route['api/v1/payments/(:num)/reject']['POST']     = 'api/Payments/reject/$1';
@@ -227,8 +230,6 @@ $route['api/v1/security/shifts/(:num)']['PUT']                  = 'api/SecurityS
 $route['api/v1/security/shifts/(:num)']['DELETE']               = 'api/SecurityShifts/destroy/$1';
 
 $route['api/v1/security/attendance']['GET']                     = 'api/SecurityAttendance/index';
-$route['api/v1/security/attendance/summary']['GET']             = 'api/SecurityAttendance/summary';
-$route['api/v1/security/attendance/calendar']['GET']            = 'api/SecurityAttendance/calendar';
 $route['api/v1/security/attendance/check-in']['POST']           = 'api/SecurityAttendance/check_in';
 $route['api/v1/security/attendance/check-out']['POST']          = 'api/SecurityAttendance/check_out';
 $route['api/v1/security/attendance/manual-log']['POST']         = 'api/SecurityAttendance/manual_log';
@@ -248,12 +249,6 @@ $route['api/v1/my/guest-visits']['GET']                         = 'api/MyGuestVi
  * ======================================================= */
 $route['api/v1/emergencies']['GET']                             = 'api/Emergencies/index';
 $route['api/v1/emergencies']['POST']                            = 'api/Emergencies/store';
-
-/* =========================================================
- * FCM Tokens
- * ======================================================= */
-$route['api/v1/fcm/token']['POST']                              = 'api/FcmTokens/save';
-$route['api/v1/fcm/token']['DELETE']                            = 'api/FcmTokens/remove';
 $route['api/v1/emergencies/(:num)/acknowledge']['POST']         = 'api/Emergencies/acknowledge/$1';
 $route['api/v1/emergencies/(:num)/resolve']['POST']             = 'api/Emergencies/resolve/$1';
 $route['api/v1/emergencies/(:num)/cancel']['POST']              = 'api/Emergencies/cancel/$1';
@@ -322,7 +317,6 @@ $route['api/v1/meeting-minutes/(:num)']['PUT']                   = 'api/MeetingM
 $route['api/v1/meeting-minutes/(:num)']['DELETE']                = 'api/MeetingMinutes/destroy/$1';
 $route['api/v1/meeting-minutes/(:num)/action-items']['POST']     = 'api/MeetingMinutes/action_items_create/$1';
 
-
 /* =========================================================
  * Public Share API + Share Pages
  * ======================================================= */
@@ -358,8 +352,3 @@ $route['api/v1/dashboard/report']['GET']                         = 'api/Dashboar
 $route['api/v1/org-units']['GET']                               = 'api/OrgUnits/index';
 
 $route['api/v1/audit-logs']['GET']                               = 'api/AuditLogs/index';
-
-/* =========================================================
- * System / Health Check
- * ======================================================= */
-$route['api/v1/system/health']['GET']                            = 'api/SystemHealth/index';

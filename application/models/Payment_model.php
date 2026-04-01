@@ -140,6 +140,19 @@ class Payment_model extends MY_Model
         if (!empty($filters['payer_household_id'])) {
             $countQ->where('p.payer_household_id', (int)$filters['payer_household_id']);
         }
+        if (!empty($filters['q'])) {
+            $kw = trim((string)$filters['q']);
+            if ($kw !== '') {
+                $countQ->group_start()
+                    ->like('hp.full_name', $kw)
+                    ->or_like('hh.kk_number', $kw)
+                    ->or_like('h.block', $kw)
+                    ->or_like('h.number', $kw)
+                    ->or_like('p.note', $kw)
+                    ->or_like('p.reference_no', $kw)
+                    ->group_end();
+            }
+        }
 
         $total = (int)$countQ->count_all_results();
 
@@ -167,6 +180,19 @@ class Payment_model extends MY_Model
         }
         if (!empty($filters['payer_household_id'])) {
             $itemsQ->where('p.payer_household_id', (int)$filters['payer_household_id']);
+        }
+        if (!empty($filters['q'])) {
+            $kw = trim((string)$filters['q']);
+            if ($kw !== '') {
+                $itemsQ->group_start()
+                    ->like('hp.full_name', $kw)
+                    ->or_like('hh.kk_number', $kw)
+                    ->or_like('h.block', $kw)
+                    ->or_like('h.number', $kw)
+                    ->or_like('p.note', $kw)
+                    ->or_like('p.reference_no', $kw)
+                    ->group_end();
+            }
         }
 
         $items = $itemsQ

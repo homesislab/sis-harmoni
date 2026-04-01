@@ -141,7 +141,7 @@ class ProfileFamilyAccounts extends MY_Controller
             'status' => 'active',
         ]);
 
-        $this->UserModel->assign_role_code($id, 'resident');
+        $this->UserModel->assign_role_code($id, 'warga');
 
         $user = $this->UserModel->find_by_id($id);
         unset($user['password_hash']);

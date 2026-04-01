@@ -14,7 +14,6 @@ class Payments extends MY_Controller
         $this->load->model('Invoice_model', 'InvoiceModel');
         $this->load->model('Charge_model', 'ChargeModel');
         $this->load->model('Ledger_model', 'LedgerModel');
-        $this->load->library('whatsapp');
     }
 
     public function index(): void
@@ -26,6 +25,7 @@ class Payments extends MY_Controller
         $filters = [
             'status' => $this->input->get('status') ? (string)$this->input->get('status') : null,
             'payer_household_id' => $this->input->get('payer_household_id') ? (int)$this->input->get('payer_household_id') : null,
+            'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
         if (!$this->has_permission('app.services.finance.payments.verify')) {
@@ -110,20 +110,229 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Mengirim konfirmasi pembayaran', 'Mengirim konfirmasi pembayaran Rp ' . $amt . ' untuk ' . $labelText);
+        api_ok($this->PaymentModel->find_by_id($id), null, 201);
+    }
 
-        // Send WA Notification
-        $admin_wa = $this->whatsapp->get_admin_keuangan();
-        if ($admin_wa) {
-            $hh_name = 'Warga';
-            $hh = $this->db->select('p.full_name')->from('households h')->join('persons p', 'p.id = h.head_person_id')->where('h.id', $hhid)->get()->row_array();
-            if ($hh) {
-                $hh_name = $hh['full_name'];
-            }
-            $wa_msg = "Assalamu’alaikum\n\nTerdapat konfirmasi pembayaran baru dengan rincian:\nNama: *{$hh_name}*\nNominal: *Rp {$amt}*\nUntuk: *{$labelText}*\n\nMohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-            $this->whatsapp->send_message($admin_wa, $wa_msg);
+    public function manual_store(): void
+    {
+        $this->require_any_permission(['app.services.finance.payments.verify']);
+
+        $in = $this->json_input();
+        $household_id = (int)($in['household_id'] ?? 0);
+        $charge_type_id = (int)($in['charge_type_id'] ?? 0);
+        $invoice_ids = $in['invoice_ids'] ?? [];
+        $periods = $in['periods'] ?? [];
+        $paid_at = trim((string)($in['paid_at'] ?? date('Y-m-d H:i:s')));
+        $note = trim((string)($in['note'] ?? ''));
+        $amountInput = array_key_exists('amount', $in) ? (float)$in['amount'] : null;
+
+        $errors = [];
+        if ($household_id <= 0) {
+            $errors['household_id'] = 'Wajib diisi';
         }
 
-        api_ok($this->PaymentModel->find_by_id($id), null, 201);
+        $invoice_ids = is_array($invoice_ids) ? array_values(array_unique(array_map(fn ($x) => (int)$x, $invoice_ids))) : [];
+        $invoice_ids = array_values(array_filter($invoice_ids, fn ($x) => $x > 0));
+
+        $cleanPeriods = [];
+        if (is_array($periods)) {
+            foreach ($periods as $period) {
+                $period = trim((string)$period);
+                if ($period === '') {
+                    continue;
+                }
+                if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+                    $errors['periods'] = 'Format periode harus YYYY-MM';
+                    break;
+                }
+                $cleanPeriods[] = $period;
+            }
+        }
+        $cleanPeriods = array_values(array_unique($cleanPeriods));
+
+        if (!empty($cleanPeriods) && $charge_type_id <= 0) {
+            $errors['charge_type_id'] = 'Jenis iuran wajib diisi untuk periode baru';
+        }
+
+        if (empty($invoice_ids) && empty($cleanPeriods)) {
+            $errors['invoice_ids'] = 'Pilih minimal 1 invoice atau 1 periode baru';
+        }
+
+        if (empty($invoice_ids) && empty($cleanPeriods)) {
+            $errors['periods'] = 'Pilih minimal 1 invoice atau 1 periode baru';
+        }
+
+        if (empty($invoice_ids)) {
+            if ($charge_type_id <= 0) {
+                $errors['charge_type_id'] = 'Wajib diisi';
+            }
+            if (empty($cleanPeriods)) {
+                $errors['periods'] = 'Pilih minimal 1 periode';
+            }
+        }
+
+        if (!empty($errors)) {
+            api_validation_error($errors);
+            return;
+        }
+
+        $ensured = ['created_invoice_ids' => []];
+        $this->db->trans_start();
+
+        if (!empty($cleanPeriods)) {
+            $ensured = $this->_ensure_manual_invoices($household_id, $charge_type_id, $cleanPeriods);
+            if (!$ensured['ok']) {
+                $this->db->trans_rollback();
+                api_validation_error($ensured['errors']);
+                return;
+            }
+            $invoice_ids = array_values(array_unique(array_merge($invoice_ids, $ensured['invoice_ids'])));
+        }
+
+        $invoiceRows = $this->InvoiceModel->list_by_household_and_ids($household_id, $invoice_ids);
+        if (count($invoiceRows) !== count($invoice_ids)) {
+            $this->db->trans_rollback();
+            api_validation_error(['invoice_ids' => 'Ada invoice yang tidak valid untuk KK ini']);
+            return;
+        }
+
+        usort($invoiceRows, function ($a, $b) {
+            $pa = (string)($a['period'] ?? '');
+            $pb = (string)($b['period'] ?? '');
+            if ($pa === $pb) {
+                return ((int)($a['id'] ?? 0)) <=> ((int)($b['id'] ?? 0));
+            }
+            return strcmp($pa, $pb);
+        });
+
+        $invoice_ids = array_values(array_map(fn ($row) => (int)$row['id'], $invoiceRows));
+
+        $totalOutstanding = 0.0;
+        foreach ($invoiceRows as $row) {
+            $invId = (int)($row['id'] ?? 0);
+            $invTotal = (float)($row['total_amount'] ?? 0);
+            $alreadyPaid = $this->PaymentModel->sum_allocated_for_invoice($invId);
+            $remain = max(0.0, $invTotal - $alreadyPaid);
+            $totalOutstanding += $remain;
+        }
+        $totalOutstanding = round($totalOutstanding, 2);
+
+        if ($totalOutstanding <= 0.0001) {
+            $this->db->trans_rollback();
+            api_validation_error(['amount' => 'Seluruh tagihan terpilih sudah lunas']);
+            return;
+        }
+
+        $amount = $amountInput;
+        if ($amount === null || $amount <= 0) {
+            $amount = $totalOutstanding;
+        }
+        $amount = round((float)$amount, 2);
+
+        if ($amount <= 0) {
+            $this->db->trans_rollback();
+            api_validation_error(['amount' => 'Nominal harus lebih dari 0']);
+            return;
+        }
+        if ($amount - $totalOutstanding > 0.01) {
+            $this->db->trans_rollback();
+            api_validation_error(['amount' => 'Nominal lebih besar dari total sisa tagihan yang dipilih']);
+            return;
+        }
+
+        $manualNote = 'Pembayaran manual bendahara';
+        if ($note !== '') {
+            $manualNote .= ' - ' . $note;
+        }
+
+        $paymentId = $this->PaymentModel->create([
+            'payer_household_id' => $household_id,
+            'amount' => $amount,
+            'paid_at' => $paid_at !== '' ? $paid_at : date('Y-m-d H:i:s'),
+            'proof_file_url' => null,
+            'note' => $manualNote,
+            'status' => 'pending',
+        ]);
+
+        $this->PaymentModel->insert_intents($paymentId, $invoice_ids);
+
+        $pay = $this->PaymentModel->find_by_id($paymentId);
+        $ledgerDescription = $this->_build_payment_ledger_description($household_id, $paymentId, true);
+        $auto = $this->_build_auto_allocations($pay ?: []);
+        if (!$auto['ok']) {
+            $this->db->trans_rollback();
+            api_validation_error(['payment' => $auto['message']]);
+            return;
+        }
+
+        $this->PaymentModel->approve(
+            $paymentId,
+            (int)($this->auth_user['id'] ?? 0),
+            $auto['invoice_allocations'],
+            $auto['component_allocations']
+        );
+
+        foreach ($auto['invoice_allocations'] as $a) {
+            $inv_id = (int)($a['invoice_id'] ?? 0);
+            if ($inv_id <= 0) {
+                continue;
+            }
+            $inv = $this->InvoiceModel->find_by_id($inv_id);
+            if (!$inv) {
+                continue;
+            }
+
+            $paid_total = $this->PaymentModel->sum_allocated_for_invoice($inv_id);
+            $total = (float)($inv['total_amount'] ?? 0);
+
+            if ($paid_total <= 0.0001) {
+                $this->InvoiceModel->update_status($inv_id, 'unpaid');
+            } elseif ($paid_total + 0.01 < $total) {
+                $this->InvoiceModel->update_status($inv_id, 'partial');
+            } else {
+                $this->InvoiceModel->update_status($inv_id, 'paid');
+            }
+        }
+
+        foreach ($auto['component_allocations'] as $a) {
+            $cc_id = (int)($a['charge_component_id'] ?? 0);
+            $amt = (float)($a['allocated_amount'] ?? 0);
+            if ($cc_id <= 0 || $amt <= 0) {
+                continue;
+            }
+
+            $cc = $this->ChargeModel->find_component($cc_id);
+            $la_id = (int)($cc['ledger_account_id'] ?? 0);
+            if ($la_id <= 0) {
+                continue;
+            }
+
+            $this->LedgerModel->create_entry([
+                'ledger_account_id' => $la_id,
+                'direction' => 'in',
+                'amount' => $amt,
+                'category' => 'Pembayaran Iuran',
+                'description' => $ledgerDescription,
+                'occurred_at' => $paid_at !== '' ? $paid_at : date('Y-m-d H:i:s'),
+                'source_type' => 'payment',
+                'source_id' => $paymentId,
+                'created_by' => (int)($this->auth_user['id'] ?? 0),
+            ]);
+        }
+
+        $this->db->trans_complete();
+
+        audit_log(
+            $this,
+            'Mencatat pembayaran manual',
+            'Mencatat pembayaran manual Rp ' . number_format($amount, 0, ',', '.') . ' untuk invoice: ' . implode(', ', $invoice_ids)
+        );
+
+        api_ok([
+            'payment' => $this->PaymentModel->find_by_id($paymentId),
+            'invoice_ids' => $invoice_ids,
+            'created_invoice_ids' => $ensured['created_invoice_ids'] ?? [],
+        ], null, 201);
     }
 
     public function show(int $id = 0): void
@@ -281,8 +490,8 @@ class Payments extends MY_Controller
                 'ledger_account_id' => $la_id,
                 'direction' => 'in',
                 'amount' => $amt,
-                'category' => 'PAYMENT',
-                'description' => 'Payment #'.$id,
+                'category' => 'Pembayaran Iuran',
+                'description' => $this->_build_payment_ledger_description((int)($pay['payer_household_id'] ?? 0), $id, false),
                 'occurred_at' => date('Y-m-d H:i:s'),
                 'source_type' => 'payment',
                 'source_id' => $id,
@@ -307,21 +516,6 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Menyetujui pembayaran', 'Menyetujui pembayaran Rp ' . $amt . ' untuk ' . $labelText);
-
-        // Send WA Notification
-        $hhid = (int)($pay['payer_household_id'] ?? 0);
-        if ($hhid > 0) {
-            $hh = $this->db->get_where('households', ['id' => $hhid])->row_array();
-            if ($hh && !empty($hh['head_person_id'])) {
-                $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
-                if ($person && !empty($person['phone'])) {
-                    $pName = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "Assalamu’alaikum, {$pName}\n\nAlhamdulillah, pembayaran Anda sebesar *Rp {$amt}* untuk *{$labelText}* telah kami terima dengan baik.\n\nTerima kasih banyak atas partisipasinya dalam pengelolaan lingkungan kita, semoga membawa keberkahan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-                    $this->whatsapp->send_message($person['phone'], $wa_msg);
-                }
-            }
-        }
-
         api_ok($this->PaymentModel->find_by_id($id));
     }
 
@@ -362,21 +556,6 @@ class Payments extends MY_Controller
             $labelText .= ' (+' . $more . ' lagi)';
         }
         audit_log($this, 'Menolak pembayaran', 'Menolak pembayaran Rp ' . $amt . ' untuk ' . $labelText);
-
-        // Send WA Notification
-        $hhid = (int)($pay['payer_household_id'] ?? 0);
-        if ($hhid > 0) {
-            $hh = $this->db->get_where('households', ['id' => $hhid])->row_array();
-            if ($hh && !empty($hh['head_person_id'])) {
-                $person = $this->db->get_where('persons', ['id' => $hh['head_person_id']])->row_array();
-                if ($person && !empty($person['phone'])) {
-                    $pName = $person['full_name'] ?? 'Warga';
-                    $wa_msg = "Assalamu’alaikum, {$pName}\n\nTerima kasih atas konfirmasi pembayaran sebesar *Rp {$amt}* untuk *{$labelText}*.\nNamun, untuk saat ini konfirmasi belum dapat diproses dengan alasan berikut:\n\n{$note}\n\nSilakan dicek kembali atau dikomunikasikan dengan pengurus apabila diperlukan. InsyaAllah akan dibantu.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-                    $this->whatsapp->send_message($person['phone'], $wa_msg);
-                }
-            }
-        }
-
         api_ok($this->PaymentModel->find_by_id($id));
     }
 
@@ -532,5 +711,132 @@ class Payments extends MY_Controller
             'invoice_allocations' => $invoice_allocs,
             'component_allocations' => $component_allocs,
         ];
+    }
+
+    private function _ensure_manual_invoices(int $household_id, int $charge_type_id, array $periods): array
+    {
+        if ($household_id <= 0) {
+            return ['ok' => false, 'errors' => ['household_id' => 'KK tidak valid']];
+        }
+        if ($charge_type_id <= 0) {
+            return ['ok' => false, 'errors' => ['charge_type_id' => 'Jenis iuran wajib diisi']];
+        }
+        if (empty($periods)) {
+            return ['ok' => false, 'errors' => ['periods' => 'Pilih minimal 1 periode']];
+        }
+
+        $chargeType = $this->ChargeModel->find_type($charge_type_id);
+        if (!$chargeType) {
+            return ['ok' => false, 'errors' => ['charge_type_id' => 'Jenis iuran tidak ditemukan']];
+        }
+
+        $defaultAmount = (float)$this->ChargeModel->sum_components($charge_type_id);
+        if ($defaultAmount <= 0.0001) {
+            return ['ok' => false, 'errors' => ['charge_type_id' => 'Jenis iuran belum punya komponen nominal']];
+        }
+
+        $invoiceIds = [];
+        $createdInvoiceIds = [];
+
+        foreach ($periods as $period) {
+            $exists = $this->InvoiceModel->find_by_household_charge_period($household_id, $charge_type_id, $period);
+            if ($exists) {
+                $invoiceIds[] = (int)$exists['id'];
+                continue;
+            }
+
+            $invoiceId = $this->InvoiceModel->create([
+                'household_id' => $household_id,
+                'charge_type_id' => $charge_type_id,
+                'period' => $period,
+                'total_amount' => $defaultAmount,
+                'status' => 'unpaid',
+                'note' => 'Auto-create for manual payment',
+            ]);
+
+            $this->InvoiceModel->add_line($invoiceId, [
+                'house_id' => null,
+                'line_type' => 'base',
+                'description' => ($chargeType['name'] ?? 'Iuran') . ' ' . $period,
+                'qty' => 1,
+                'unit_price' => $defaultAmount,
+                'amount' => $defaultAmount,
+                'sort_order' => 1,
+            ]);
+
+            $invoiceIds[] = (int)$invoiceId;
+            $createdInvoiceIds[] = (int)$invoiceId;
+        }
+
+        return [
+            'ok' => true,
+            'invoice_ids' => array_values(array_unique($invoiceIds)),
+            'created_invoice_ids' => $createdInvoiceIds,
+        ];
+    }
+
+    private function _find_household_brief(int $household_id): ?array
+    {
+        if ($household_id <= 0) {
+            return null;
+        }
+
+        $row = $this->db->select("
+                hh.id,
+                hh.kk_number,
+                p.full_name as head_name,
+                hs.block as house_block,
+                hs.number as house_number,
+                CONCAT(hs.block, '-', hs.number) as unit_code
+            ", false)
+            ->from('households hh')
+            ->join('persons p', 'p.id = hh.head_person_id', 'left')
+            ->join('house_occupancies ho', 'ho.household_id = hh.id AND ho.status = "active"', 'left')
+            ->join('houses hs', 'hs.id = ho.house_id', 'left')
+            ->where('hh.id', $household_id)
+            ->get()
+            ->row_array();
+
+        return $row ?: null;
+    }
+
+    private function _build_payment_ledger_description(int $household_id, int $payment_id, bool $isManual = false): string
+    {
+        $intentInvoices = $this->PaymentModel->list_intent_invoices($payment_id);
+        $household = $this->_find_household_brief($household_id);
+
+        $payerParts = [];
+        $unitCode = trim((string)($household['unit_code'] ?? ''));
+        $headName = trim((string)($household['head_name'] ?? ''));
+        if ($unitCode !== '') {
+            $payerParts[] = 'Unit ' . strtoupper($unitCode);
+        }
+        if ($headName !== '') {
+            $payerParts[] = $headName;
+        }
+        $payerText = !empty($payerParts) ? implode(' / ', $payerParts) : 'warga';
+
+        $labels = [];
+        foreach ($intentInvoices as $x) {
+            $charge = trim((string)($x['charge_name'] ?? 'Iuran'));
+            $period = trim((string)($x['period'] ?? ''));
+            $labels[] = trim($charge . ($period !== '' ? ' ' . $period : ''));
+        }
+        $labels = array_values(array_unique(array_filter($labels, fn ($v) => $v !== '')));
+
+        $detailText = 'tagihan iuran';
+        if (!empty($labels)) {
+            $shown = array_slice($labels, 0, 2);
+            $detailText = implode(', ', $shown);
+            $more = count($labels) - count($shown);
+            if ($more > 0) {
+                $detailText .= ' +' . $more . ' tagihan';
+            }
+        }
+
+        return ($isManual ? 'Pelunasan manual ' : 'Pembayaran iuran ')
+            . $detailText
+            . ' - '
+            . $payerText;
     }
 }

@@ -15,7 +15,6 @@ class Onboarding extends MY_Controller
         $this->load->model('User_model', 'UserModel');
         $this->load->model('House_claim_model', 'HouseClaimModel');
         $this->load->model('Vehicle_model', 'VehicleModel');
-        $this->load->library('whatsapp');
     }
 
     public function units(): void
@@ -265,7 +264,7 @@ class Onboarding extends MY_Controller
                 'password_hash' => password_hash($password, PASSWORD_BCRYPT),
                 'status' => 'inactive',
             ]);
-            $this->UserModel->assign_role_code($userId, 'resident');
+            $this->UserModel->assign_role_code($userId, 'warga');
 
             if (is_array($vehicles)) {
                 foreach ($vehicles as $v) {
@@ -322,14 +321,6 @@ class Onboarding extends MY_Controller
                 'household_id' => $householdId,
                 'status' => 'pending_review',
             ], ['message' => 'Pendaftaran diterima, menunggu review pengurus'], 201);
-
-            // Send WA Notification to group pengurus
-            $admin_wa = $this->whatsapp->get_group_pengurus();
-            if ($admin_wa) {
-                $nama_pendaftar = $head['full_name'] ?? 'Warga Baru';
-                $wa_msg = "Assalamu’alaikum\n\nTerdapat pendaftaran warga baru dengan data:\nNama: *{$nama_pendaftar}*\nNo. KK: *{$kk}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
-                $this->whatsapp->send_message($admin_wa, $wa_msg);
-            }
 
         } catch (Throwable $e) {
             $this->db->trans_rollback();

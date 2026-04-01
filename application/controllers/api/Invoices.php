@@ -115,6 +115,7 @@ class Invoices extends MY_Controller
             'period' => $this->input->get('period') ? (string)$this->input->get('period') : null,
             'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
             'charge_type_id' => $this->input->get('charge_type_id') ? (int)$this->input->get('charge_type_id') : null,
+            'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
         $res = $this->InvoiceModel->paginate($page, $per, $filters);
