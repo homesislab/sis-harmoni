@@ -230,6 +230,8 @@ $route['api/v1/security/shifts/(:num)']['PUT']                  = 'api/SecurityS
 $route['api/v1/security/shifts/(:num)']['DELETE']               = 'api/SecurityShifts/destroy/$1';
 
 $route['api/v1/security/attendance']['GET']                     = 'api/SecurityAttendance/index';
+$route['api/v1/security/attendance/summary']['GET']             = 'api/SecurityAttendance/summary';
+$route['api/v1/security/attendance/calendar']['GET']            = 'api/SecurityAttendance/calendar';
 $route['api/v1/security/attendance/check-in']['POST']           = 'api/SecurityAttendance/check_in';
 $route['api/v1/security/attendance/check-out']['POST']          = 'api/SecurityAttendance/check_out';
 $route['api/v1/security/attendance/manual-log']['POST']         = 'api/SecurityAttendance/manual_log';
