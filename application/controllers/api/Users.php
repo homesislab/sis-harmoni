@@ -24,23 +24,26 @@ class Users extends MY_Controller
 
         $offset = ($page - 1) * $per;
 
-        $qb = $this->db->from('users u');
+        $qb = $this->db->from('users u')
+            ->join('persons p', 'p.id = u.person_id', 'left');
         if ($q !== '') {
             $qb->group_start()
                 ->like('u.username', $q)
                 ->or_like('u.email', $q)
+                ->or_like('p.full_name', $q)
                 ->group_end();
         }
         $total = (int)$qb->count_all_results('', false);
 
-        $items = $qb->select('u.id,u.person_id,u.username,u.email,u.status,u.created_at,u.updated_at')
+        $items = $qb->select('u.id,u.person_id,u.username,u.email,u.status,u.created_at,u.updated_at,p.full_name as person_name')
             ->order_by('u.id', 'DESC')
             ->limit($per, $offset)
             ->get()->result_array();
 
         foreach ($items as &$u) {
             $rbac = $this->rbac->load_for_user((int)$u['id']);
-            $u['roles'] = $rbac['roles'] ?? [];
+            $payload = $this->UserModel->get_me_payload((int)$u['id'], $rbac);
+            $u['roles'] = $payload['roles'] ?? [];
         }
 
         api_ok(['items' => $items], [
@@ -106,7 +109,8 @@ class Users extends MY_Controller
         }
         unset($user['password_hash']);
         $rbac = $this->rbac->load_for_user($id);
-        api_ok(['user' => $user, 'roles' => $rbac['roles'] ?? [], 'permissions' => $rbac['permissions'] ?? []]);
+        $payload = $this->UserModel->get_me_payload($id, $rbac);
+        api_ok(['user' => $user, 'roles' => $payload['roles'] ?? [], 'permissions' => $rbac['permissions'] ?? []]);
     }
 
     public function update(int $id = 0): void
@@ -123,7 +127,7 @@ class Users extends MY_Controller
 
         $in = $this->json_input();
         $upd = [];
-        foreach (['email','status','person_id'] as $f) {
+        foreach (['email', 'status', 'person_id'] as $f) {
             if (array_key_exists($f, $in)) {
                 $upd[$f] = $in[$f];
             }
@@ -165,6 +169,7 @@ class Users extends MY_Controller
         }
 
         $rbac = $this->rbac->load_for_user($id);
-        api_ok(['user_id' => $id,'roles' => $rbac['roles'] ?? []]);
+        $payload = $this->UserModel->get_me_payload($id, $rbac);
+        api_ok(['user_id' => $id, 'roles' => $payload['roles'] ?? []]);
     }
 }
