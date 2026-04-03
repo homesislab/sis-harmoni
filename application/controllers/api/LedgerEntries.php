@@ -33,6 +33,17 @@ class LedgerEntries extends MY_Controller
             $filters['to'] = (string)$this->input->get('to');
         }
 
+        if (!empty($filters['ledger_account_id'])) {
+            $account = $this->LedgerModel->find_account((int)$filters['ledger_account_id']);
+            if (!$account) {
+                api_validation_error(['ledger_account_id' => 'Akun kas tidak ditemukan']);
+                return;
+            }
+            $this->require_org_access($account['type'] ?? null);
+        } else {
+            $filters['account_types'] = $this->allowed_orgs();
+        }
+
         $res = $this->LedgerModel->paginate_entries($page, $per, $filters);
         api_ok(['items' => $res['items']], $res['meta']);
     }
@@ -85,18 +96,20 @@ class LedgerEntries extends MY_Controller
             return;
         }
 
-        if ($transfer_to_ledger_account_id > 0) {
-            $from = $this->LedgerModel->find_account($ledger_account_id);
-            $to = $this->LedgerModel->find_account($transfer_to_ledger_account_id);
+        $from = $this->LedgerModel->find_account($ledger_account_id);
+        if (!$from) {
+            api_validation_error(['ledger_account_id' => 'Akun kas tidak ditemukan']);
+            return;
+        }
+        $this->require_org_access($from['type'] ?? null);
 
-            if (!$from) {
-                api_validation_error(['ledger_account_id' => 'Akun asal tidak ditemukan']);
-                return;
-            }
+        if ($transfer_to_ledger_account_id > 0) {
+            $to = $this->LedgerModel->find_account($transfer_to_ledger_account_id);
             if (!$to) {
                 api_validation_error(['transfer_to_ledger_account_id' => 'Akun tujuan tidak ditemukan']);
                 return;
             }
+            $this->require_org_access($to['type'] ?? null);
             if (($from['type'] ?? null) !== ($to['type'] ?? null)) {
                 api_validation_error(['transfer_to_ledger_account_id' => 'Mutasi antar kas harus dalam unit pengelola yang sama']);
                 return;

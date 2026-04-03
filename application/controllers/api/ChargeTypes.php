@@ -14,7 +14,9 @@ class ChargeTypes extends MY_Controller
 
     public function index(): void
     {
-        $items = $this->ChargeModel->list_types((string)$this->input->get('category'), $this->input->get('active'));
+        $raw = trim((string)($this->input->get('category') ?? ''));
+        $category = $this->constrain_org_filter($raw !== '' ? $raw : null);
+        $items = $this->ChargeModel->list_types($category, $this->input->get('active'));
         api_ok(['items' => $items]);
     }
 
@@ -23,6 +25,8 @@ class ChargeTypes extends MY_Controller
         $this->require_any_permission(['app.services.finance.charge_types.manage']);
 
         $in = $this->json_input();
+        $in['category'] = $this->constrain_org_filter($in['category'] ?? null) ?? 'paguyuban';
+
         $err = $this->ChargeModel->validate_type($in, true);
         if ($err) {
             api_validation_error($err);
@@ -46,6 +50,7 @@ class ChargeTypes extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['category'] ?? null);
         api_ok($row);
     }
 
@@ -63,7 +68,13 @@ class ChargeTypes extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['category'] ?? null);
+
         $in = $this->json_input();
+        if (array_key_exists('category', $in)) {
+            $in['category'] = $this->constrain_org_filter($in['category']);
+        }
+
         $err = $this->ChargeModel->validate_type($in, false);
         if ($err) {
             api_validation_error($err);
@@ -87,6 +98,8 @@ class ChargeTypes extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['category'] ?? null);
 
         $this->ChargeModel->update_type($id, ['is_active' => 0]);
         api_ok(null, ['message' => 'Jenis iuran dinonaktifkan']);

@@ -19,7 +19,7 @@ class Posts extends MY_Controller
         $per  = $p['per_page'];
 
         $filters = [
-            'org' => $this->input->get('org') ? (string)$this->input->get('org') : null,
+            'org' => $this->constrain_org_filter($this->input->get('org') ? (string)$this->input->get('org') : null),
             'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
             'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
@@ -38,6 +38,8 @@ class Posts extends MY_Controller
         $this->require_any_permission(['app.services.info.posts.manage']);
 
         $in = $this->json_input();
+        $in['org'] = $this->constrain_org_filter($in['org'] ?? null) ?? 'paguyuban';
+
         $err = $this->PostModel->validate_payload($in, true);
         if ($err) {
             api_validation_error($err);
@@ -68,6 +70,8 @@ class Posts extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['org'] ?? null);
+
         if (!$this->has_permission('app.services.info.posts.manage') && $row['status'] !== 'published') {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
             return;
@@ -90,7 +94,13 @@ class Posts extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['org'] ?? null);
+
         $in = $this->json_input();
+        if (array_key_exists('org', $in)) {
+            $in['org'] = $this->constrain_org_filter($in['org']);
+        }
+
         $err = $this->PostModel->validate_payload($in, false);
         if ($err) {
             api_validation_error($err);
@@ -121,6 +131,8 @@ class Posts extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['org'] ?? null);
 
         $this->PostModel->delete($id);
 

@@ -24,6 +24,7 @@ class FundraiserDonations extends MY_Controller
 
         $status = trim((string)$this->input->get('status'));
         $q = trim((string)$this->input->get('q'));
+        $rawCategory = trim((string)($this->input->get('category') ?? ''));
 
         $status = $status !== '' ? strtolower($status) : '';
         if ($status && !in_array($status, ['pending', 'approved', 'rejected'], true)) {
@@ -34,6 +35,7 @@ class FundraiserDonations extends MY_Controller
         $filters = [
             'status' => ($status !== '' ? $status : null),
             'q' => ($q !== '' ? $q : null),
+            'category' => $this->constrain_org_filter($rawCategory !== '' ? $rawCategory : null),
         ];
 
         $res = $this->DonationModel->paginate_admin($page, $per, $filters);
@@ -53,6 +55,7 @@ class FundraiserDonations extends MY_Controller
             api_not_found('Donation tidak ditemukan');
             return;
         }
+        $this->require_org_access($don['fundraiser_category'] ?? null);
         if (($don['status'] ?? '') !== 'pending') {
             api_conflict('Donation sudah diproses');
             return;
@@ -121,6 +124,7 @@ class FundraiserDonations extends MY_Controller
             api_not_found('Donation tidak ditemukan');
             return;
         }
+        $this->require_org_access($don['fundraiser_category'] ?? null);
         if (($don['status'] ?? '') !== 'pending') {
             api_conflict('Donation sudah diproses');
             return;

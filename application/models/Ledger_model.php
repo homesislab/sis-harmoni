@@ -123,7 +123,7 @@ class Ledger_model extends MY_Model
         if (!empty($filters['ledger_account_id'])) {
             $qb->where('e.ledger_account_id', (int)$filters['ledger_account_id']);
         }
-        if (!empty($filters['direction']) && in_array($filters['direction'], ['in','out'], true)) {
+        if (!empty($filters['direction']) && in_array($filters['direction'], ['in', 'out'], true)) {
             $qb->where('e.direction', $filters['direction']);
         }
         if (!empty($filters['from'])) {
@@ -131,6 +131,12 @@ class Ledger_model extends MY_Model
         }
         if (!empty($filters['to'])) {
             $qb->where('e.occurred_at <=', $filters['to']);
+        }
+        if (!empty($filters['account_types']) && is_array($filters['account_types'])) {
+            $types = array_values(array_filter($filters['account_types'], fn($item) => in_array($item, ['paguyuban', 'dkm'], true)));
+            if (!empty($types)) {
+                $qb->where_in('a.type', $types);
+            }
         }
 
         $countQ = clone $qb;

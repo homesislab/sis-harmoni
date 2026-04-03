@@ -27,6 +27,7 @@ class FundraiserUpdates extends MY_Controller
             return;
         }
 
+        $this->require_org_access($fund['category'] ?? null);
         $items = $this->UpdateModel->list_by_fundraiser($fundraiser_id);
         api_ok(['items' => $items]);
     }
@@ -48,22 +49,15 @@ class FundraiserUpdates extends MY_Controller
             return;
         }
 
-        // Ambil user id login dari MY_Controller (sesuaikan dengan implementasimu)
-        // Pilih salah satu yang memang ada di project kamu:
-        $createdBy = 0;
+        $this->require_org_access($fund['category'] ?? null);
 
-        // opsi 1 (paling umum kalau MY_Controller simpan user):
+        $createdBy = 0;
         if (property_exists($this, 'user') && is_array($this->user) && isset($this->user['id'])) {
             $createdBy = (int)$this->user['id'];
         }
-
-        // opsi 2 (kalau ada auth user):
         if ($createdBy <= 0 && property_exists($this, 'auth_user') && is_array($this->auth_user) && isset($this->auth_user['id'])) {
             $createdBy = (int)$this->auth_user['id'];
         }
-
-        // opsi 3 (kalau ada helper method di MY_Controller):
-        // if ($createdBy <= 0 && method_exists($this, 'auth_user_id')) $createdBy = (int)$this->auth_user_id();
 
         if ($createdBy <= 0) {
             api_validation_error(['auth' => 'User login tidak valid']);
@@ -83,7 +77,6 @@ class FundraiserUpdates extends MY_Controller
 
         audit_log($this, 'Menambahkan update donasi', 'Menambahkan update "' . $updTitle . '" untuk "' . $fundTitle . '"');
 
-        // Broadcast WA
         $donors = $this->db->select('DISTINCT(person_id) AS pid')->from('fundraiser_donations')->where('fundraiser_id', $fund['id'])->where('status', 'approved')->get()->result_array();
         foreach ($donors as $dn) {
             $pid = (int)$dn['pid'];
@@ -91,7 +84,15 @@ class FundraiserUpdates extends MY_Controller
                 $pRow = $this->db->get_where('persons', ['id' => $pid])->row_array();
                 if ($pRow && !empty($pRow['phone'])) {
                     $nama = $pRow['full_name'] ?? 'Warga';
-                    $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat informasi terbaru mengenai program donasi *{$fundTitle}*:\n_{$updTitle}_\n\nJazakumullah khairan katsiran atas doa dan dukungannya.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                    $wa_msg = "Assalamu’alaikum, {$nama}
+
+Terdapat informasi terbaru mengenai program donasi *{$fundTitle}*:
+_{$updTitle}_
+
+Jazakumullah khairan katsiran atas doa dan dukungannya.
+
+—
+Pesan ini dikirim otomatis melalui layanan SIS Paguyuban";
                     $this->whatsapp->send_message($pRow['phone'], $wa_msg);
                 }
             }
@@ -112,6 +113,11 @@ class FundraiserUpdates extends MY_Controller
         if (!$row) {
             api_not_found();
             return;
+        }
+
+        $fund = $this->FundraiserModel->find_by_id((int)($row['fundraiser_id'] ?? 0));
+        if ($fund) {
+            $this->require_org_access($fund['category'] ?? null);
         }
 
         $in = $this->json_input();
@@ -143,6 +149,11 @@ class FundraiserUpdates extends MY_Controller
         if (!$row) {
             api_not_found();
             return;
+        }
+
+        $fund = $this->FundraiserModel->find_by_id((int)($row['fundraiser_id'] ?? 0));
+        if ($fund) {
+            $this->require_org_access($fund['category'] ?? null);
         }
 
         $this->UpdateModel->delete($id);

@@ -15,7 +15,8 @@ class LedgerAccounts extends MY_Controller
 
     public function index(): void
     {
-        $type = $this->input->get('type') ? (string)$this->input->get('type') : null;
+        $rawType = trim((string)($this->input->get('type') ?? ''));
+        $type = $this->constrain_org_filter($rawType !== '' ? $rawType : null);
 
         if ($type !== null && !in_array($type, ['paguyuban', 'dkm'], true)) {
             api_validation_error(['type' => 'Harus paguyuban|dkm']);
@@ -31,7 +32,8 @@ class LedgerAccounts extends MY_Controller
         $in = $this->json_input();
 
         $name = trim((string)($in['name'] ?? ''));
-        $type = $this->input->get('type') ? (string)$this->input->get('type') : (string)($in['type'] ?? '');
+        $rawType = $this->input->get('type') ? (string)$this->input->get('type') : (string)($in['type'] ?? '');
+        $type = $this->constrain_org_filter(trim($rawType) !== '' ? $rawType : null) ?? 'paguyuban';
 
         $fields = [];
         if ($name === '') {
@@ -67,6 +69,7 @@ class LedgerAccounts extends MY_Controller
             return;
         }
 
+        $this->require_org_access($acc['type'] ?? null);
         $stats = $this->LedgerModel->account_stats($id);
         api_ok(['account' => $acc, 'stats' => $stats]);
     }
@@ -83,6 +86,8 @@ class LedgerAccounts extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($acc['type'] ?? null);
 
         $in = $this->json_input();
         $name = trim((string)($in['name'] ?? ''));
@@ -112,6 +117,8 @@ class LedgerAccounts extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($acc['type'] ?? null);
 
         $bal = (float)($acc['balance'] ?? 0);
         if ($bal != 0.0) {

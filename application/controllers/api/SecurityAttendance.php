@@ -13,6 +13,15 @@ class SecurityAttendance extends MY_Controller
         $this->load->model('Security_attendance_model', 'AttendanceModel');
     }
 
+    private function current_guard(): ?array
+    {
+        if (empty($this->auth_user['id'])) {
+            return null;
+        }
+        $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
+        return $guard ?: null;
+    }
+
     public function index(): void
     {
         $p = $this->get_pagination_params();
@@ -23,7 +32,7 @@ class SecurityAttendance extends MY_Controller
 
         $guard_id = null;
         if (!$this->has_permission('app.services.security.attendance.manage')) {
-            $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
+            $guard = $this->current_guard();
             $guard_id = $guard ? (int)$guard['id'] : -1;
         }
 
@@ -39,12 +48,11 @@ class SecurityAttendance extends MY_Controller
     public function check_in(): void
     {
         $in = $this->json_input();
+        $can_manage = $this->has_permission('app.services.security.attendance.manage');
 
-        $security_guard_id = isset($in['security_guard_id']) ? (int)$in['security_guard_id'] : 0;
-        
-        // Auto resolve for self check-in
-        if ($security_guard_id <= 0 && isset($this->auth_user['id'])) {
-            $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
+        $security_guard_id = $can_manage ? (int)($in['security_guard_id'] ?? 0) : 0;
+        if ($security_guard_id <= 0) {
+            $guard = $this->current_guard();
             if ($guard) {
                 $security_guard_id = (int)$guard['id'];
             }
@@ -63,7 +71,6 @@ class SecurityAttendance extends MY_Controller
             return;
         }
 
-        // Check if already checked in today
         $existing = $this->AttendanceModel->find_by_guard_and_date($security_guard_id, $date);
         if ($existing) {
             api_validation_error(['date' => 'Sudah melakukan absensi pada tanggal ini']);
@@ -92,13 +99,19 @@ class SecurityAttendance extends MY_Controller
     {
         $in = $this->json_input();
         $id = isset($in['id']) ? (int)$in['id'] : 0;
+        $can_manage = $this->has_permission('app.services.security.attendance.manage');
+        $guard = $can_manage ? null : $this->current_guard();
+        $guard_id = $guard ? (int)$guard['id'] : 0;
 
-        // Auto resolve for self check-out
-        if ($id <= 0 && isset($this->auth_user['id'])) {
-            $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
-            if ($guard) {
+        if (!$can_manage) {
+            if ($guard_id <= 0) {
+                api_validation_error(['security_guard_id' => 'Akun Anda belum terhubung ke data anggota keamanan.']);
+                return;
+            }
+
+            if ($id <= 0) {
                 $att = $this->db->get_where('security_attendances', [
-                    'security_guard_id' => $guard['id'],
+                    'security_guard_id' => $guard_id,
                     'date' => date('Y-m-d')
                 ])->row_array();
                 if ($att) {
@@ -118,6 +131,11 @@ class SecurityAttendance extends MY_Controller
             return;
         }
 
+        if (!$can_manage && (int)($attendance['security_guard_id'] ?? 0) !== $guard_id) {
+            api_error('FORBIDDEN', 'Anda hanya bisa check-out untuk sesi absensi milik akun Anda sendiri.', 403);
+            return;
+        }
+
         if ($attendance['check_out_time']) {
             api_validation_error(['id' => 'Sudah melakukan check-out']);
             return;
@@ -128,10 +146,10 @@ class SecurityAttendance extends MY_Controller
             'updated_at' => date('Y-m-d H:i:s')
         ];
 
-        // Update notes if provided, appending to existing
         if (!empty($in['notes'])) {
             $upd['notes'] = $attendance['notes']
-                ? $attendance['notes'] . "\nCheck-out notes: " . $in['notes']
+                ? $attendance['notes'] . "
+Check-out notes: " . $in['notes']
                 : $in['notes'];
         }
 
@@ -143,6 +161,8 @@ class SecurityAttendance extends MY_Controller
 
     public function manual_log(): void
     {
+        $this->require_permission('app.services.security.attendance.manage');
+
         $in = $this->json_input();
 
         $security_guard_id = isset($in['security_guard_id']) ? (int)$in['security_guard_id'] : 0;
@@ -163,10 +183,8 @@ class SecurityAttendance extends MY_Controller
             return;
         }
 
-        // Check if already checked in
         $existing = $this->AttendanceModel->find_by_guard_and_date($security_guard_id, $date);
         if ($existing) {
-            // Update instead
             $upd = [
                 'status' => $status,
                 'shift_id' => $shift_id,
@@ -206,6 +224,8 @@ class SecurityAttendance extends MY_Controller
 
     public function destroy(int $id = 0): void
     {
+        $this->require_permission('app.services.security.attendance.manage');
+
         if ($id <= 0) {
             api_not_found();
             return;
@@ -228,7 +248,7 @@ class SecurityAttendance extends MY_Controller
 
         $guard_id = null;
         if (!$this->has_permission('app.services.security.attendance.manage')) {
-            $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
+            $guard = $this->current_guard();
             $guard_id = $guard ? (int)$guard['id'] : -1;
         }
 
@@ -239,17 +259,16 @@ class SecurityAttendance extends MY_Controller
 
     public function calendar(): void
     {
-        $start = trim((string)($this->input->get('start') ?? date('Y-m-01')));
-        $end = trim((string)($this->input->get('end') ?? date('Y-m-t')));
+        $guard_id = (int)($this->input->get('security_guard_id') ?? 0);
+        $year = (int)($this->input->get('year') ?? date('Y'));
+        $month = (int)($this->input->get('month') ?? date('m'));
 
-        $guard_id = null;
         if (!$this->has_permission('app.services.security.attendance.manage')) {
-            $guard = $this->db->get_where('security_guards', ['user_id' => $this->auth_user['id']])->row_array();
+            $guard = $this->current_guard();
             $guard_id = $guard ? (int)$guard['id'] : -1;
         }
 
-        $items = $this->AttendanceModel->get_calendar_events($start, $end, $guard_id);
-
-        api_ok(['items' => $items, 'start' => $start, 'end' => $end]);
+        $items = $this->AttendanceModel->get_calendar($year, $month, $guard_id);
+        api_ok(['items' => $items, 'year' => $year, 'month' => $month]);
     }
 }

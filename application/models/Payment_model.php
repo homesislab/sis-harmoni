@@ -154,6 +154,15 @@ class Payment_model extends MY_Model
             }
         }
 
+        if (!empty($filters['category'])) {
+            $countQ->where("EXISTS (
+                SELECT 1
+                FROM payment_invoice_intents pii
+                JOIN invoices i ON i.id = pii.invoice_id
+                JOIN charge_types ct ON ct.id = i.charge_type_id
+                WHERE pii.payment_id = p.id AND ct.category = " . $this->db->escape($filters['category']) . ")", null, false);
+        }
+
         $total = (int)$countQ->count_all_results();
 
         $itemsQ = $this->db->select("
@@ -193,6 +202,15 @@ class Payment_model extends MY_Model
                     ->or_like('p.reference_no', $kw)
                     ->group_end();
             }
+        }
+
+        if (!empty($filters['category'])) {
+            $itemsQ->where("EXISTS (
+                SELECT 1
+                FROM payment_invoice_intents pii
+                JOIN invoices i ON i.id = pii.invoice_id
+                JOIN charge_types ct ON ct.id = i.charge_type_id
+                WHERE pii.payment_id = p.id AND ct.category = " . $this->db->escape($filters['category']) . ")", null, false);
         }
 
         $items = $itemsQ

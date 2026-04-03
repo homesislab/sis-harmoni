@@ -16,6 +16,15 @@ class Payments extends MY_Controller
         $this->load->model('Ledger_model', 'LedgerModel');
     }
 
+    private function require_payment_org_access(int $payment_id): array
+    {
+        $intentInvoices = $this->PaymentModel->list_intent_invoices($payment_id);
+        foreach ($intentInvoices as $item) {
+            $this->require_org_access($item['charge_category'] ?? null);
+        }
+        return $intentInvoices;
+    }
+
     public function index(): void
     {
         $p = $this->get_pagination_params();
@@ -37,6 +46,8 @@ class Payments extends MY_Controller
             $filters['payer_household_id'] = $hhid;
         } else {
             $this->require_any_permission(['app.services.finance.payments.verify']);
+            $rawCategory = trim((string)($this->input->get('category') ?? ''));
+            $filters['category'] = $this->constrain_org_filter($rawCategory !== '' ? $rawCategory : null);
         }
 
         $res = $this->PaymentModel->paginate($page, $per, $filters);
@@ -77,6 +88,9 @@ class Payments extends MY_Controller
         if (count($valid) !== count($invoice_ids)) {
             api_validation_error(['invoice_ids' => 'Ada invoice tidak valid / bukan milik household']);
             return;
+        }
+        foreach ($valid as $invoice) {
+            $this->require_org_access($invoice['charge_category'] ?? null);
         }
 
         $paid_at = $in['paid_at'] ?? date('Y-m-d H:i:s');
@@ -154,6 +168,15 @@ class Payments extends MY_Controller
             $errors['charge_type_id'] = 'Jenis iuran wajib diisi untuk periode baru';
         }
 
+        if ($charge_type_id > 0) {
+            $chargeType = $this->ChargeModel->find_type($charge_type_id);
+            if (!$chargeType) {
+                $errors['charge_type_id'] = 'Jenis iuran tidak ditemukan';
+            } else {
+                $this->require_org_access($chargeType['category'] ?? null);
+            }
+        }
+
         if (empty($invoice_ids) && empty($cleanPeriods)) {
             $errors['invoice_ids'] = 'Pilih minimal 1 invoice atau 1 periode baru';
         }
@@ -194,6 +217,10 @@ class Payments extends MY_Controller
             $this->db->trans_rollback();
             api_validation_error(['invoice_ids' => 'Ada invoice yang tidak valid untuk KK ini']);
             return;
+        }
+
+        foreach ($invoiceRows as $invoiceRow) {
+            $this->require_org_access($invoiceRow['charge_category'] ?? null);
         }
 
         usort($invoiceRows, function ($a, $b) {
@@ -358,20 +385,21 @@ class Payments extends MY_Controller
                 api_error('FORBIDDEN', 'Tidak punya akses', 403);
                 return;
             }
+            $intents = $this->PaymentModel->list_intents($id);
+            $intentInvoices = [];
+            if (!empty($intents)) {
+                $invIds = array_map(function ($x) {
+                    return (int)($x['invoice_id'] ?? 0);
+                }, $intents);
+                $invIds = array_values(array_filter($invIds, fn ($v) => $v > 0));
+                if ($invIds) {
+                    $intentInvoices = $this->PaymentModel->list_intent_invoices($id);
+                }
+            }
         } else {
             $this->require_any_permission(['app.services.finance.payments.verify']);
-        }
-
-        $intents = $this->PaymentModel->list_intents($id);
-        $intentInvoices = [];
-        if (!empty($intents)) {
-            $invIds = array_map(function ($x) {
-                return (int)($x['invoice_id'] ?? 0);
-            }, $intents);
-            $invIds = array_values(array_filter($invIds, fn ($v) => $v > 0));
-            if ($invIds) {
-                $intentInvoices = $this->PaymentModel->list_intent_invoices($id);
-            }
+            $intents = $this->PaymentModel->list_intents($id);
+            $intentInvoices = $this->require_payment_org_access($id);
         }
 
         $invoice_allocs = $this->PaymentModel->list_invoice_allocations($id);
@@ -403,6 +431,8 @@ class Payments extends MY_Controller
             api_error('CONFLICT', 'Payment status bukan pending', 409);
             return;
         }
+
+        $this->require_payment_org_access($id);
 
         $in = $this->json_input();
         $invoice_allocs = $in['invoice_allocations'] ?? [];
@@ -536,6 +566,8 @@ class Payments extends MY_Controller
             api_error('CONFLICT', 'Payment status bukan pending', 409);
             return;
         }
+
+        $this->require_payment_org_access($id);
 
         $in = $this->json_input();
         $note = $in['note'] ?? ($in['reason'] ?? null);

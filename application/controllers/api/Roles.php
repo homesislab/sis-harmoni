@@ -4,23 +4,46 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Roles extends MY_Controller
 {
+    private const VALID_SCOPES = ['all', 'paguyuban', 'dkm'];
+
     public function __construct()
     {
         parent::__construct();
         $this->as_api();
         $this->require_auth();
         $this->require_permission('app.services.settings.rbac.manage');
+        $this->ensure_org_scope_column();
+    }
+
+    private function ensure_org_scope_column(): void
+    {
+        if (!$this->db->table_exists('roles') || $this->db->field_exists('org_scope', 'roles')) {
+            return;
+        }
+
+        try {
+            $this->db->query("ALTER TABLE roles ADD COLUMN org_scope VARCHAR(16) NOT NULL DEFAULT 'all' AFTER description");
+        } catch (\Throwable $e) {
+            // Ignore best-effort schema sync failure.
+        }
+    }
+
+    private function normalize_scope($scope): string
+    {
+        $value = strtolower(trim((string)$scope));
+        return in_array($value, self::VALID_SCOPES, true) ? $value : 'all';
     }
 
     public function index(): void
     {
         $items = $this->db
-            ->select('id,code,name,description,created_at,updated_at')
+            ->select('id,code,name,description,org_scope,created_at,updated_at')
             ->from('roles')
             ->order_by('code', 'ASC')
             ->get()->result_array();
 
         foreach ($items as &$r) {
+            $r['org_scope'] = $this->normalize_scope($r['org_scope'] ?? 'all');
             $perms = $this->db
                 ->select('p.code')
                 ->from('role_permissions rp')
@@ -39,6 +62,7 @@ class Roles extends MY_Controller
         $in = $this->json_input();
         $code = trim((string)($in['code'] ?? ''));
         $name = trim((string)($in['name'] ?? ''));
+        $org_scope = $this->normalize_scope($in['org_scope'] ?? 'all');
 
         $err = [];
         if ($code === '') {
@@ -62,12 +86,16 @@ class Roles extends MY_Controller
             'code' => $code,
             'name' => $name,
             'description' => $in['description'] ?? null,
+            'org_scope' => $org_scope,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s'),
         ]);
 
         $id = (int)$this->db->insert_id();
         $role = $this->db->get_where('roles', ['id' => $id])->row_array();
+        if ($role) {
+            $role['org_scope'] = $this->normalize_scope($role['org_scope'] ?? 'all');
+        }
         api_ok(['role' => $role], null, 201);
     }
 
@@ -91,6 +119,7 @@ class Roles extends MY_Controller
             ->order_by('p.code', 'ASC')
             ->get()->result_array();
         $role['permission_codes'] = array_map(fn ($x) => $x['code'], $perms);
+        $role['org_scope'] = $this->normalize_scope($role['org_scope'] ?? 'all');
 
         api_ok(['role' => $role]);
     }
@@ -114,11 +143,17 @@ class Roles extends MY_Controller
                 $upd[$f] = $in[$f];
             }
         }
+        if (array_key_exists('org_scope', $in)) {
+            $upd['org_scope'] = $this->normalize_scope($in['org_scope']);
+        }
         if ($upd) {
             $upd['updated_at'] = date('Y-m-d H:i:s');
             $this->db->where('id', $id)->update('roles', $upd);
         }
         $fresh = $this->db->get_where('roles', ['id' => $id])->row_array();
+        if ($fresh) {
+            $fresh['org_scope'] = $this->normalize_scope($fresh['org_scope'] ?? 'all');
+        }
         api_ok(['role' => $fresh]);
     }
 

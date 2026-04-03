@@ -85,7 +85,7 @@ class Donation_model extends MY_Model
         $offset = ($page - 1) * $per;
 
         $qb = $this->db
-            ->select('d.*, f.title AS fundraiser_title, p.full_name, h.code AS house_code, hp.full_name AS head_name', false)
+            ->select('d.*, f.title AS fundraiser_title, f.category AS fundraiser_category, p.full_name, h.code AS house_code, hp.full_name AS head_name', false)
             ->from('fundraiser_donations d')
             ->join('fundraisers f', 'f.id = d.fundraiser_id', 'left')
             ->join('persons p', 'p.id = d.person_id', 'left');
@@ -94,6 +94,9 @@ class Donation_model extends MY_Model
 
         if (!empty($filters['status'])) {
             $qb->where('d.status', (string)$filters['status']);
+        }
+        if (!empty($filters['category'])) {
+            $qb->where('f.category', (string)$filters['category']);
         }
 
         if (!empty($filters['q'])) {

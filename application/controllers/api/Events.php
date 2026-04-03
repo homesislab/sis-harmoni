@@ -19,7 +19,7 @@ class Events extends MY_Controller
         $per  = $p['per_page'];
 
         $filters = [
-            'org'  => $this->input->get('org') ? (string)$this->input->get('org') : null,
+            'org'  => $this->constrain_org_filter($this->input->get('org') ? (string)$this->input->get('org') : null),
             'from' => $this->input->get('from') ? (string)$this->input->get('from') : null,
             'to'   => $this->input->get('to') ? (string)$this->input->get('to') : null,
             'q'    => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
@@ -40,6 +40,8 @@ class Events extends MY_Controller
         $this->require_any_permission(['app.services.info.events.manage']);
 
         $in = $this->json_input();
+        $in['org'] = $this->constrain_org_filter($in['org'] ?? null) ?? 'paguyuban';
+
         $err = $this->EventModel->validate_payload($in, true);
         if ($err) {
             api_validation_error($err);
@@ -63,11 +65,14 @@ class Events extends MY_Controller
             api_not_found();
             return;
         }
+
         $row = $this->EventModel->find_by_id($id);
         if (!$row) {
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['org'] ?? null);
         api_ok($row);
     }
 
@@ -85,7 +90,13 @@ class Events extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['org'] ?? null);
+
         $in = $this->json_input();
+        if (array_key_exists('org', $in)) {
+            $in['org'] = $this->constrain_org_filter($in['org']);
+        }
+
         $err = $this->EventModel->validate_payload($in, false);
         if ($err) {
             api_validation_error($err);
@@ -116,6 +127,8 @@ class Events extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['org'] ?? null);
 
         $this->EventModel->delete($id);
 

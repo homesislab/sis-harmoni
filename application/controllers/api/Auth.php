@@ -47,13 +47,15 @@ class Auth extends MY_Controller
         $userId = (int)$user['id'];
         $personId = isset($user['person_id']) ? (int)$user['person_id'] : null;
 
-        $rbac = $this->rbac->load_for_user($userId); // expected: ['roles'=>[], 'permissions'=>[]]
+        $rbac = $this->rbac->load_for_user($userId);
 
         $tokenPayload = [
             'user_id'     => $userId,
             'person_id'   => $personId,
             'roles'       => $rbac['roles'] ?? [],
             'permissions' => $rbac['permissions'] ?? [],
+            'allowed_orgs'=> $rbac['allowed_orgs'] ?? ['paguyuban', 'dkm'],
+            'org_scope'   => $rbac['org_scope'] ?? 'all',
         ];
 
         $token = $this->authtoken->issue($tokenPayload);
@@ -73,6 +75,8 @@ class Auth extends MY_Controller
         $rbac = [
             'roles'       => $this->auth_roles ?? [],
             'permissions' => $this->auth_permissions ?? [],
+            'allowed_orgs'=> $this->auth_allowed_orgs ?? ['paguyuban', 'dkm'],
+            'org_scope'   => $this->auth_org_scope ?? 'all',
         ];
 
         $payload = $this->UserModel->get_me_payload((int)$this->auth_user['id'], $rbac);
@@ -122,6 +126,8 @@ class Auth extends MY_Controller
         $rbac = [
             'roles'       => $this->auth_roles ?? [],
             'permissions' => $this->auth_permissions ?? [],
+            'allowed_orgs'=> $this->auth_allowed_orgs ?? ['paguyuban', 'dkm'],
+            'org_scope'   => $this->auth_org_scope ?? 'all',
         ];
         $payload = $this->UserModel->get_me_payload((int)$this->auth_user['id'], $rbac);
         api_ok($payload, ['message' => 'Akun diperbarui']);

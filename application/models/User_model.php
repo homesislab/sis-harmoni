@@ -63,6 +63,7 @@ class User_model extends MY_Model
         }
         $this->db->where('id', $user_id)->update('users', $upd);
     }
+
     public function get_me_payload(int $user_id, ?array $rbac = null): ?array
     {
         $user = $this->find_by_id($user_id);
@@ -72,18 +73,32 @@ class User_model extends MY_Model
 
         unset($user['password_hash']);
 
+        $personId = (int)($user['person_id'] ?? 0);
+        $householdId = $personId > 0 ? $this->resolve_household_id_by_person($personId) : null;
+        $houseId = $householdId ? $this->resolve_house_id_by_household((int)$householdId) : null;
+        $user['household_id'] = $householdId ? (int)$householdId : null;
+        $user['house_id'] = $houseId ? (int)$houseId : null;
+
         $role_codes = $rbac['roles'] ?? [];
-        $roles_out = $role_codes; // Fallback to raw string array
+        $roles_out = $role_codes;
 
         if (!empty($role_codes)) {
-            // Query translation mappings
-            $mapped_roles = $this->db->select('code, name')
+            $select = $this->db->field_exists('org_scope', 'roles')
+                ? 'code, name, org_scope'
+                : 'code, name';
+
+            $mapped_roles = $this->db->select($select)
                 ->from('roles')
                 ->where_in('code', $role_codes)
                 ->get()->result_array();
-                
+
             if (!empty($mapped_roles)) {
-                $roles_out = $mapped_roles;
+                $roles_out = array_map(function ($role) {
+                    if (!isset($role['org_scope']) || trim((string)$role['org_scope']) === '') {
+                        $role['org_scope'] = 'all';
+                    }
+                    return $role;
+                }, $mapped_roles);
             }
         }
 
@@ -91,6 +106,10 @@ class User_model extends MY_Model
             'user' => $user,
             'roles' => $roles_out,
             'permissions' => $rbac['permissions'] ?? [],
+            'allowed_orgs' => $rbac['allowed_orgs'] ?? ['paguyuban', 'dkm'],
+            'org_scope' => $rbac['org_scope'] ?? 'all',
+            'household_id' => $user['household_id'],
+            'house_id' => $user['house_id'],
         ];
     }
 

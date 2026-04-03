@@ -24,9 +24,10 @@ class Fundraisers extends MY_Controller
         $per  = $p['per_page'];
 
         $can_manage = $this->has_permission('app.services.finance.donation_campaigns.manage');
+        $rawCategory = trim((string)($this->input->get('category') ?? ''));
 
         $filters = [
-            'category' => $this->input->get('category') ? (string)$this->input->get('category') : null,
+            'category' => $this->constrain_org_filter($rawCategory !== '' ? $rawCategory : null),
             'q' => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
         ];
 
@@ -43,6 +44,17 @@ class Fundraisers extends MY_Controller
         $this->require_permission('app.services.finance.donation_campaigns.manage');
 
         $in = $this->json_input();
+        if (array_key_exists('category', $in)) {
+            $in['category'] = $this->constrain_org_filter($in['category']);
+        }
+        if (!empty($in['ledger_account_id'])) {
+            $account = $this->LedgerModel->find_account((int)$in['ledger_account_id']);
+            if ($account) {
+                $this->require_org_access($account['type'] ?? null);
+                $in['category'] = $account['type'];
+            }
+        }
+
         $err = $this->FundraiserModel->validate_payload($in, true);
         if ($err) {
             api_validation_error($err);
@@ -71,6 +83,8 @@ class Fundraisers extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['category'] ?? null);
         api_ok($row);
     }
 
@@ -88,7 +102,20 @@ class Fundraisers extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['category'] ?? null);
+
         $in = $this->json_input();
+        if (array_key_exists('category', $in)) {
+            $in['category'] = $this->constrain_org_filter($in['category']);
+        }
+        if (!empty($in['ledger_account_id'])) {
+            $account = $this->LedgerModel->find_account((int)$in['ledger_account_id']);
+            if ($account) {
+                $this->require_org_access($account['type'] ?? null);
+                $in['category'] = $account['type'];
+            }
+        }
+
         $err = $this->FundraiserModel->validate_payload($in, false);
         if ($err) {
             api_validation_error($err);
@@ -119,6 +146,8 @@ class Fundraisers extends MY_Controller
             api_not_found();
             return;
         }
+
+        $this->require_org_access($row['category'] ?? null);
 
         $approved = $this->DonationModel->count_approved_for_fundraiser($id);
         if ($approved > 0) {
@@ -151,6 +180,7 @@ class Fundraisers extends MY_Controller
             return;
         }
 
+        $this->require_org_access($row['category'] ?? null);
         $this->FundraiserModel->set_status($id, 'closed');
 
         $title = trim((string)($row['title'] ?? ''));
@@ -236,7 +266,6 @@ class Fundraisers extends MY_Controller
         $amt = number_format((float)($don['amount'] ?? $amount), 0, ',', '.');
         audit_log($this, 'Mengirim donasi', 'Mengirim donasi Rp ' . $amt . ' untuk "' . $fundTitle . '"');
 
-        // Send WA Notification
         $admin_wa = $this->whatsapp->get_admin_keuangan();
         if ($admin_wa) {
             $donor = ($is_anonymous === 1) ? 'Anonim' : 'Warga';
@@ -246,7 +275,17 @@ class Fundraisers extends MY_Controller
                     $donor = $pRow['full_name'];
                 }
             }
-            $wa_msg = "Assalamu’alaikum\n\nTerdapat donasi baru dengan rincian:\nDari: *{$donor}*\nProgram: *{$fundTitle}*\nNominal: *Rp {$amt}*\n\nMohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+            $wa_msg = "Assalamu’alaikum
+
+Terdapat donasi baru dengan rincian:
+Dari: *{$donor}*
+Program: *{$fundTitle}*
+Nominal: *Rp {$amt}*
+
+Mohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.
+
+—
+Pesan ini dikirim otomatis melalui layanan SIS Paguyuban";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -266,6 +305,8 @@ class Fundraisers extends MY_Controller
             return;
         }
 
+        $this->require_org_access($fund['category'] ?? null);
+
         $p = $this->get_pagination_params();
         $page = $p['page'];
         $per  = $p['per_page'];
@@ -276,7 +317,7 @@ class Fundraisers extends MY_Controller
         if (!$can_manage) {
             $status = 'approved';
         } else {
-            if ($status && !in_array($status, ['pending','approved','rejected'], true)) {
+            if ($status && !in_array($status, ['pending', 'approved', 'rejected'], true)) {
                 api_validation_error(['status' => 'Nilai tidak valid']);
                 return;
             }
@@ -285,5 +326,4 @@ class Fundraisers extends MY_Controller
         $res = $this->DonationModel->paginate_for_fundraiser($fundraiser_id, $status, $page, $per);
         api_ok(['items' => $res['items']], $res['meta']);
     }
-
 }
