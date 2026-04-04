@@ -4,6 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Auth extends MY_Controller
 {
+    private const ACCESS_TOKEN_TYPE = 'access';
+    private const REFRESH_TOKEN_TYPE = 'refresh';
+
     public function __construct()
     {
         parent::__construct();
@@ -45,27 +48,51 @@ class Auth extends MY_Controller
         }
 
         $userId = (int)$user['id'];
-        $personId = isset($user['person_id']) ? (int)$user['person_id'] : null;
-
         $rbac = $this->rbac->load_for_user($userId);
 
-        $tokenPayload = [
-            'user_id'     => $userId,
-            'person_id'   => $personId,
-            'roles'       => $rbac['roles'] ?? [],
-            'permissions' => $rbac['permissions'] ?? [],
-            'allowed_orgs'=> $rbac['allowed_orgs'] ?? ['paguyuban', 'dkm'],
-            'org_scope'   => $rbac['org_scope'] ?? 'all',
-        ];
+        api_ok($this->build_auth_payload($user, $rbac));
+    }
 
-        $token = $this->authtoken->issue($tokenPayload);
+    public function refresh(): void
+    {
+        $in = $this->json_input();
+        $refreshToken = trim((string)($in['refresh_token'] ?? ''));
 
-        $payload = $this->UserModel->get_me_payload($userId, $rbac);
+        if ($refreshToken === '') {
+            api_unauthorized('Refresh token tidak ditemukan.');
+            return;
+        }
 
-        api_ok([
-            'token' => $token,
-            'me'    => $payload,
-        ]);
+        $claims = $this->authtoken->verify($refreshToken);
+        if (!$claims || !is_array($claims)) {
+            api_token_invalid('Refresh token tidak valid atau sudah kedaluwarsa.');
+            return;
+        }
+
+        if (($claims['token_type'] ?? '') !== self::REFRESH_TOKEN_TYPE) {
+            api_token_invalid('Token yang dikirim bukan refresh token.');
+            return;
+        }
+
+        $userId = (int)($claims['user_id'] ?? 0);
+        if ($userId <= 0) {
+            api_token_invalid('Refresh token tidak valid: user_id tidak ditemukan.');
+            return;
+        }
+
+        $user = $this->UserModel->find_by_id($userId);
+        if (!$user) {
+            api_token_invalid('User tidak ditemukan atau refresh token tidak valid.');
+            return;
+        }
+
+        if (($user['status'] ?? '') !== 'active') {
+            api_error('FORBIDDEN', 'Akun tidak aktif.', 403);
+            return;
+        }
+
+        $rbac = $this->rbac->load_for_user($userId);
+        api_ok($this->build_auth_payload($user, $rbac));
     }
 
     public function me(): void
@@ -135,7 +162,46 @@ class Auth extends MY_Controller
 
     public function logout(): void
     {
-        $this->require_auth();
         api_ok(null, ['message' => 'Logout berhasil']);
+    }
+
+    private function build_auth_payload(array $user, array $rbac): array
+    {
+        $userId = (int)$user['id'];
+        $personId = isset($user['person_id']) ? (int)$user['person_id'] : null;
+
+        $claims = [
+            'user_id'      => $userId,
+            'person_id'    => $personId,
+            'roles'        => $rbac['roles'] ?? [],
+            'permissions'  => $rbac['permissions'] ?? [],
+            'allowed_orgs' => $rbac['allowed_orgs'] ?? ['paguyuban', 'dkm'],
+            'org_scope'    => $rbac['org_scope'] ?? 'all',
+        ];
+
+        $accessTtl = (int)($this->config->item('jwt_access_ttl_seconds') ?: $this->config->item('jwt_ttl_seconds') ?: 43200);
+        $refreshTtl = (int)($this->config->item('jwt_refresh_ttl_seconds') ?: 15552000);
+
+        $token = $this->authtoken->issue(array_merge($claims, [
+            'token_type' => self::ACCESS_TOKEN_TYPE,
+        ]), $accessTtl);
+
+        $refreshToken = $this->authtoken->issue([
+            'user_id'    => $userId,
+            'person_id'  => $personId,
+            'token_type' => self::REFRESH_TOKEN_TYPE,
+        ], $refreshTtl);
+
+        $payload = $this->UserModel->get_me_payload($userId, $rbac);
+
+        return [
+            'token' => $token,
+            'access_token' => $token,
+            'refresh_token' => $refreshToken,
+            'token_type' => 'Bearer',
+            'expires_in' => $accessTtl,
+            'refresh_expires_in' => $refreshTtl,
+            'me' => $payload,
+        ];
     }
 }

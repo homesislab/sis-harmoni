@@ -20,7 +20,7 @@ class AuthToken
 
         $this->ttl = isset($params['ttl'])
             ? (int)$params['ttl']
-            : (int)($this->CI->config->item('jwt_ttl') ?: 86400);
+            : $this->resolve_ttl();
     }
 
     /**
@@ -127,5 +127,20 @@ class AuthToken
         }
         $decoded = base64_decode(strtr($data, '-_', '+/'), true);
         return ($decoded === false) ? null : $decoded;
+    }
+
+    protected function resolve_ttl(): int
+    {
+        $ttl = (int)($this->CI->config->item('jwt_ttl_seconds') ?: 0);
+        if ($ttl > 0) {
+            return $ttl;
+        }
+
+        $legacyTtl = (int)($this->CI->config->item('jwt_ttl') ?: 0);
+        if ($legacyTtl > 0) {
+            return $legacyTtl;
+        }
+
+        return 86400;
     }
 }

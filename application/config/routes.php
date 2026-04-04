@@ -29,6 +29,7 @@ $route['api/v1/registrations/(:num)/reject']['POST']       = 'api/Registrations/
  * Auth
  * ======================================================= */
 $route['api/v1/auth/login']['POST']   = 'api/Auth/login';
+$route['api/v1/auth/refresh']['POST'] = 'api/Auth/refresh';
 $route['api/v1/auth/me']['GET']       = 'api/Auth/me';
 $route['api/v1/auth/me']['PUT']       = 'api/Auth/update_me';
 $route['api/v1/auth/logout']['POST']  = 'api/Auth/logout';
