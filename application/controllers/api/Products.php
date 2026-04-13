@@ -11,6 +11,7 @@ class Products extends MY_Controller
         $this->require_auth();
         $this->load->model('Local_product_model', 'ProductModel');
         $this->load->model('Local_business_model', 'BusinessModel');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -22,6 +23,8 @@ class Products extends MY_Controller
         $filters = [
             'business_id' => $this->input->get('business_id') ? (int)$this->input->get('business_id') : null,
             'status'      => $this->input->get('status') ? (string)$this->input->get('status') : 'active',
+            'q'           => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
+            'business_status' => 'active',
         ];
 
         $res = $this->ProductModel->paginate($page, $per, $filters);
@@ -49,7 +52,7 @@ class Products extends MY_Controller
             return;
         }
 
-        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
+        $can_manage = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
         if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
@@ -60,7 +63,16 @@ class Products extends MY_Controller
         $payload['created_by'] = (int)$this->auth_user['id'];
 
         $id = $this->ProductModel->create($payload);
-        api_ok($this->ProductModel->find_by_id($id), null, 201);
+        $next = $this->ProductModel->find_by_id($id);
+        if (($next['status'] ?? '') === 'active' && ($biz['status'] ?? '') === 'active') {
+            $this->push_notification->send_to_all(
+                'Produk warga baru',
+                trim((string)($next['name'] ?? 'Produk warga')),
+                '/market/products/' . $id,
+                ['type' => 'product_active', 'product_id' => (string)$id, 'business_id' => (string)$biz['id']]
+            );
+        }
+        api_ok($next, null, 201);
     }
 
     public function show(int $id = 0): void
@@ -72,6 +84,15 @@ class Products extends MY_Controller
 
         $row = $this->ProductModel->find_by_id($id);
         if (!$row) {
+            api_not_found();
+            return;
+        }
+
+        $biz = $this->BusinessModel->find_by_id((int)$row['business_id']);
+        $can_manage = $this->has_permission('app.services.requests.businesses.review');
+        $pid = (int)($this->auth_user['person_id'] ?? 0);
+        $is_owner = $biz && ((int)($biz['owner_person_id'] ?? 0) === $pid);
+        if (!$can_manage && !$is_owner && (($row['status'] ?? '') !== 'active' || ($biz['status'] ?? '') !== 'active')) {
             api_not_found();
             return;
         }
@@ -97,7 +118,7 @@ class Products extends MY_Controller
             return;
         }
 
-        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
+        $can_manage = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
         if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);
@@ -105,8 +126,18 @@ class Products extends MY_Controller
         }
 
         $in = $this->json_input();
+        $wasActive = (($row['status'] ?? '') === 'active');
         $this->ProductModel->update($id, $in);
-        api_ok($this->ProductModel->find_by_id($id));
+        $next = $this->ProductModel->find_by_id($id);
+        if (!$wasActive && (($next['status'] ?? '') === 'active') && (($biz['status'] ?? '') === 'active')) {
+            $this->push_notification->send_to_all(
+                'Produk warga baru',
+                trim((string)($next['name'] ?? 'Produk warga')),
+                '/market/products/' . $id,
+                ['type' => 'product_active', 'product_id' => (string)$id, 'business_id' => (string)$biz['id']]
+            );
+        }
+        api_ok($next);
     }
 
     public function destroy(int $id = 0): void
@@ -127,7 +158,7 @@ class Products extends MY_Controller
             return;
         }
 
-        $can_manage = $this->has_permission('app.services.notes.inventories.manage');
+        $can_manage = $this->has_permission('app.services.requests.businesses.review');
         $pid = (int)($this->auth_user['person_id'] ?? 0);
         if (!$can_manage && (int)($biz['owner_person_id'] ?? 0) !== $pid) {
             api_error('FORBIDDEN', 'Akses ditolak', 403);

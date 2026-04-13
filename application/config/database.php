@@ -73,21 +73,27 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 $active_group = 'default';
 $query_builder = TRUE;
 
-$__sp_db_host = ($_ENV['SIS_PAGUYUBAN_DB_HOST'] ?? getenv('SIS_PAGUYUBAN_DB_HOST')) ?: '127.0.0.1';
-$__sp_db_port_raw = ($_ENV['SIS_PAGUYUBAN_DB_PORT'] ?? getenv('SIS_PAGUYUBAN_DB_PORT'));
-$__sp_db_port = ($__sp_db_port_raw !== false && $__sp_db_port_raw !== null && $__sp_db_port_raw !== '') ? (int) $__sp_db_port_raw : 3306;
-$__sp_db_hostname = $__sp_db_host;
-if ($__sp_db_port && $__sp_db_port !== 3306 && strpos($__sp_db_host, ':') === FALSE) {
-	$__sp_db_hostname = $__sp_db_host . ':' . $__sp_db_port;
+$__sis_env = static function (string $key, $default = null) {
+	$value = $_ENV[$key] ?? getenv($key);
+	if ($value !== false && $value !== null && $value !== '') return $value;
+	return $default;
+};
+
+$__sis_db_host = $__sis_env('SIS_HARMONI_DB_HOST', '127.0.0.1');
+$__sis_db_port_raw = $__sis_env('SIS_HARMONI_DB_PORT');
+$__sis_db_port = ($__sis_db_port_raw !== false && $__sis_db_port_raw !== null && $__sis_db_port_raw !== '') ? (int) $__sis_db_port_raw : 3306;
+$__sis_db_hostname = $__sis_db_host;
+if ($__sis_db_port && $__sis_db_port !== 3306 && strpos($__sis_db_host, ':') === FALSE) {
+	$__sis_db_hostname = $__sis_db_host . ':' . $__sis_db_port;
 }
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => $__sp_db_hostname,
-	'port' => $__sp_db_port,
-	'username' => ($_ENV['SIS_PAGUYUBAN_DB_USER'] ?? getenv('SIS_PAGUYUBAN_DB_USER')) ?: 'root',
-	'password' => ($_ENV['SIS_PAGUYUBAN_DB_PASS'] ?? getenv('SIS_PAGUYUBAN_DB_PASS')) ?: '',
-	'database' => ($_ENV['SIS_PAGUYUBAN_DB_NAME'] ?? getenv('SIS_PAGUYUBAN_DB_NAME')) ?: 'sis_paguyuban',
+	'hostname' => $__sis_db_hostname,
+	'port' => $__sis_db_port,
+	'username' => $__sis_env('SIS_HARMONI_DB_USER', 'root'),
+	'password' => $__sis_env('SIS_HARMONI_DB_PASS', ''),
+	'database' => $__sis_env('SIS_HARMONI_DB_NAME', 'sis_harmoni'),
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,

@@ -15,6 +15,7 @@ class Fundraisers extends MY_Controller
         $this->load->model('Fundraiser_update_model', 'UpdateModel');
         $this->load->model('Ledger_model', 'LedgerModel');
         $this->load->library('whatsapp');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -69,6 +70,15 @@ class Fundraisers extends MY_Controller
         }
         audit_log($this, 'Membuat program donasi', 'Membuat program donasi "' . $title . '"');
 
+        if (($in['status'] ?? 'active') === 'active') {
+            $this->push_notification->send_to_all(
+                'Program donasi baru',
+                $title,
+                '/services/donations/' . $id,
+                ['type' => 'fundraiser_active', 'fundraiser_id' => (string)$id]
+            );
+        }
+
         api_ok($this->FundraiserModel->find_by_id($id), null, 201);
     }
 
@@ -122,7 +132,9 @@ class Fundraisers extends MY_Controller
             return;
         }
 
+        $wasActive = (($row['status'] ?? '') === 'active');
         $this->FundraiserModel->update($id, $in);
+        $next = $this->FundraiserModel->find_by_id($id);
 
         $title = trim((string)($row['title'] ?? ''));
         if ($title === '') {
@@ -130,7 +142,16 @@ class Fundraisers extends MY_Controller
         }
         audit_log($this, 'Memperbarui program donasi', 'Memperbarui program donasi "' . $title . '"');
 
-        api_ok($this->FundraiserModel->find_by_id($id));
+        if (!$wasActive && (($next['status'] ?? '') === 'active')) {
+            $this->push_notification->send_to_all(
+                'Program donasi baru',
+                trim((string)($next['title'] ?? $title)),
+                '/services/donations/' . $id,
+                ['type' => 'fundraiser_active', 'fundraiser_id' => (string)$id]
+            );
+        }
+
+        api_ok($next);
     }
 
     public function destroy(int $id = 0): void
@@ -285,7 +306,7 @@ Nominal: *Rp {$amt}*
 Mohon bantuannya untuk dilakukan pengecekan pada sistem apabila sudah berkenan.
 
 —
-Pesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+Pesan ini dikirim otomatis melalui layanan SIS Harmoni";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 

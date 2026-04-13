@@ -1,6 +1,6 @@
-# SIS Paguyuban (Backend)
+# SIS Harmoni (Backend)
 
-Backend API berbasis **CodeIgniter 3** untuk aplikasi SIS Paguyuban.
+Backend API berbasis **CodeIgniter 3** untuk aplikasi SIS Harmoni.
 
 ## Stack
 - PHP (CodeIgniter 3)
@@ -25,11 +25,11 @@ composer install
 ### 3) Konfigurasi database
 Isi variabel berikut di `.env`:
 
-- `SIS_PAGUYUBAN_DB_HOST`
-- `SIS_PAGUYUBAN_DB_PORT`
-- `SIS_PAGUYUBAN_DB_NAME`
-- `SIS_PAGUYUBAN_DB_USER`
-- `SIS_PAGUYUBAN_DB_PASS`
+- `SIS_HARMONI_DB_HOST`
+- `SIS_HARMONI_DB_PORT`
+- `SIS_HARMONI_DB_NAME`
+- `SIS_HARMONI_DB_USER`
+- `SIS_HARMONI_DB_PASS`
 
 ### 4) Jalankan server
 Jika pakai PHP built-in:
@@ -38,29 +38,29 @@ Jika pakai PHP built-in:
 php -S localhost:8080
 ```
 
-Lalu akses base URL yang sesuai di `.env` (`SIS_PAGUYUBAN_BASE_URL`).
+Lalu akses base URL yang sesuai di `.env` (`SIS_HARMONI_BASE_URL`).
 
 ## Konfigurasi Penting
 
 ### Base URL
 `application/config/config.php` membaca:
 
-- `SIS_PAGUYUBAN_BASE_URL` (fallback ke `http://localhost/`)
+- `SIS_HARMONI_BASE_URL` (fallback ke `http://localhost/`)
 
 ### Database
 `application/config/database.php` membaca:
 
-- `SIS_PAGUYUBAN_DB_HOST`
-- `SIS_PAGUYUBAN_DB_PORT`
-- `SIS_PAGUYUBAN_DB_NAME`
-- `SIS_PAGUYUBAN_DB_USER`
-- `SIS_PAGUYUBAN_DB_PASS`
+- `SIS_HARMONI_DB_HOST`
+- `SIS_HARMONI_DB_PORT`
+- `SIS_HARMONI_DB_NAME`
+- `SIS_HARMONI_DB_USER`
+- `SIS_HARMONI_DB_PASS`
 
 ## Production Checklist (Singkat)
 - Set environment:
   - `ENVIRONMENT=production`
-  - `SIS_PAGUYUBAN_BASE_URL=https://domain-kamu/`
-  - `SIS_PAGUYUBAN_JWT_SECRET` harus random & panjang
+  - `SIS_HARMONI_BASE_URL=https://domain-kamu/`
+  - `SIS_HARMONI_JWT_SECRET` harus random & panjang
 - Pastikan folder writable oleh web server:
   - `application/cache/`
   - `application/logs/`

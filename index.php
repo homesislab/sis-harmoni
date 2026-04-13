@@ -62,7 +62,7 @@ if (is_file($autoload)) {
 }
 
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-$allowed = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://sis-paguyuban.test'];
+$allowed = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://sis-harmoni-frontend.test'];
 
 if ($origin && in_array($origin, $allowed, true)) {
   header("Access-Control-Allow-Origin: {$origin}");

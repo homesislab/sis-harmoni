@@ -4,7 +4,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>SIS Paguyuban API</title>
+	<title>SIS Harmoni API</title>
 
 	<style type="text/css">
 	::selection { background-color: #0F766E; color: #ffffff; }
@@ -87,7 +87,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 <body>
 
 <div id="container">
-	<h1>SIS Paguyuban API</h1>
+	<h1>SIS Harmoni API</h1>
 
 	<div id="body">
 		<p>
@@ -96,7 +96,7 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 		<h2>📌 Tentang</h2>
 		<p>
-			Ini adalah <strong>API resmi SIS Paguyuban</strong> (backend) untuk pengelolaan data warga,
+			Ini adalah <strong>API resmi SIS Harmoni</strong> (backend) untuk pengelolaan data warga,
 			keuangan, konten, polling, dan aktivitas Paguyuban & DKM
 			di lingkungan <strong>Sharia Islamic Soreang</strong>.
 		</p>

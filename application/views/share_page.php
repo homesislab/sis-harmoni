@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= html_escape($title) ?> | SIS Paguyuban</title>
+    <title><?= html_escape($title) ?> | SIS Harmoni</title>
     <meta name="description" content="<?= html_escape($description) ?>">
     <meta property="og:type" content="article">
-    <meta property="og:site_name" content="SIS Paguyuban">
+    <meta property="og:site_name" content="SIS Harmoni">
     <meta property="og:title" content="<?= html_escape($title) ?>">
     <meta property="og:description" content="<?= html_escape($description) ?>">
     <meta property="og:url" content="<?= html_escape($meta_url) ?>">
@@ -152,7 +152,7 @@
                 <img src="<?= html_escape($image) ?>" alt="<?= html_escape($title) ?>">
             </div>
             <div class="content">
-                <div class="eyebrow"><?= html_escape($eyebrow ?? 'SIS Paguyuban') ?></div>
+                <div class="eyebrow"><?= html_escape($eyebrow ?? 'SIS Harmoni') ?></div>
                 <h1><?= html_escape($title) ?></h1>
                 <?php if (!empty($meta_lines)): ?>
                     <div class="meta">

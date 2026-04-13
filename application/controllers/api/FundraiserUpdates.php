@@ -12,6 +12,7 @@ class FundraiserUpdates extends MY_Controller
         $this->load->model('Fundraiser_model', 'FundraiserModel');
         $this->load->model('Fundraiser_update_model', 'UpdateModel');
         $this->load->library('whatsapp');
+        $this->load->library('push_notification');
     }
 
     public function index(int $fundraiser_id = 0): void
@@ -77,6 +78,19 @@ class FundraiserUpdates extends MY_Controller
 
         audit_log($this, 'Menambahkan update donasi', 'Menambahkan update "' . $updTitle . '" untuk "' . $fundTitle . '"');
 
+        if (($fund['status'] ?? '') === 'active') {
+            $this->push_notification->send_to_all(
+                'Update program donasi',
+                $fundTitle . ': ' . $updTitle,
+                '/services/donations/' . (int)$fund['id'],
+                [
+                    'type' => 'fundraiser_update',
+                    'fundraiser_id' => (string)$fund['id'],
+                    'fundraiser_update_id' => (string)$id,
+                ]
+            );
+        }
+
         $donors = $this->db->select('DISTINCT(person_id) AS pid')->from('fundraiser_donations')->where('fundraiser_id', $fund['id'])->where('status', 'approved')->get()->result_array();
         foreach ($donors as $dn) {
             $pid = (int)$dn['pid'];
@@ -92,7 +106,7 @@ _{$updTitle}_
 Jazakumullah khairan katsiran atas doa dan dukungannya.
 
 —
-Pesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+Pesan ini dikirim otomatis melalui layanan SIS Harmoni";
                     $this->whatsapp->send_message($pRow['phone'], $wa_msg);
                 }
             }

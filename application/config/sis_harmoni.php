@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * SIS Paguyuban custom config
+ * SIS Harmoni custom config
  */
 $config['sis_uploads'] = [
     // absolute path (recommended) OR relative to FCPATH

@@ -10,6 +10,7 @@ class Posts extends MY_Controller
         $this->as_api();
         $this->require_auth();
         $this->load->model('Post_model', 'PostModel');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -53,6 +54,15 @@ class Posts extends MY_Controller
             $title = 'Tanpa judul';
         }
         audit_log($this, 'Menambahkan posting', 'Menambahkan posting "' . $title . '"');
+
+        if (($in['status'] ?? 'published') === 'published') {
+            $this->push_notification->send_to_all(
+                'Info warga baru',
+                $title,
+                '/community/posts/' . $id,
+                ['type' => 'post_published', 'post_id' => (string)$id]
+            );
+        }
 
         api_ok($this->PostModel->find_by_id($id), null, 201);
     }
@@ -107,7 +117,9 @@ class Posts extends MY_Controller
             return;
         }
 
+        $wasPublished = (($row['status'] ?? '') === 'published');
         $this->PostModel->update($id, $in);
+        $next = $this->PostModel->find_by_id($id);
 
         $title = trim((string)($row['title'] ?? ''));
         if ($title === '') {
@@ -115,7 +127,16 @@ class Posts extends MY_Controller
         }
         audit_log($this, 'Memperbarui posting', 'Memperbarui posting "' . $title . '"');
 
-        api_ok($this->PostModel->find_by_id($id));
+        if (!$wasPublished && (($next['status'] ?? '') === 'published')) {
+            $this->push_notification->send_to_all(
+                'Info warga baru',
+                trim((string)($next['title'] ?? $title)),
+                '/community/posts/' . $id,
+                ['type' => 'post_published', 'post_id' => (string)$id]
+            );
+        }
+
+        api_ok($next);
     }
 
     public function destroy(int $id = 0): void

@@ -131,8 +131,8 @@ if (!function_exists('validate_proof_url')) {
         }
 
         try {
-            $CI->config->load('sis_paguyuban', true);
-            $cfg = $CI->config->item('sis_uploads', 'sis_paguyuban');
+            $CI->config->load('sis_harmoni', true);
+            $cfg = $CI->config->item('sis_uploads', 'sis_harmoni');
             $wl  = $cfg['proof_url_whitelist_domains'] ?? [];
             $host = parse_url($url, PHP_URL_HOST);
             if (!$host) return 'Host URL tidak valid';

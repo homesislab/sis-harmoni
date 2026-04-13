@@ -12,6 +12,7 @@ class Polls extends MY_Controller
 
         $this->load->model('Poll_model', 'PollModel');
         $this->load->model('Poll_vote_model', 'VoteModel');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -178,6 +179,13 @@ class Polls extends MY_Controller
             $title = 'Tanpa judul';
         }
         audit_log($this, 'Mempublish polling', 'Mempublish polling "' . $title . '"');
+
+        $this->push_notification->send_to_all(
+            'Polling baru',
+            $title,
+            '/community/polls/' . $id,
+            ['type' => 'poll_published', 'poll_id' => (string)$id]
+        );
 
         api_ok(null, ['message' => 'Poll dipublish']);
     }

@@ -151,7 +151,7 @@ class GuestVisits extends MY_Controller
                 $vCount = $payload['visitor_count'];
                 $vPurpose = $payload['purpose'];
                 
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat tamu yang berkunjung ke unit Anda dengan rincian:\nNama Tamu: *{$vName}* ({$vCount} orang)\nKeperluan: *{$vPurpose}*\n\nTamu tersebut telah diarahkan ke unit Anda oleh tim keamanan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat tamu yang berkunjung ke unit Anda dengan rincian:\nNama Tamu: *{$vName}* ({$vCount} orang)\nKeperluan: *{$vPurpose}*\n\nTamu tersebut telah diarahkan ke unit Anda oleh tim keamanan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
                 $this->whatsapp->send_message($phone, $wa_msg);
             }
         }

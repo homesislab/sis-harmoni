@@ -9,7 +9,8 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 | Jika pakai Apache/Nginx dengan docroot di project:
 | contoh: http://localhost/
 */
-$config['base_url'] = ($_ENV['SIS_PAGUYUBAN_BASE_URL'] ?? getenv('SIS_PAGUYUBAN_BASE_URL')) ?: 'http://localhost/';
+$__sis_base_url = $_ENV['SIS_HARMONI_BASE_URL'] ?? getenv('SIS_HARMONI_BASE_URL');
+$config['base_url'] = $__sis_base_url ?: 'http://localhost/';
 
 /*
 |--------------------------------------------------------------------------

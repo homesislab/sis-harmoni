@@ -70,7 +70,7 @@ class Feedback extends MY_Controller
             }
             $cat = $row['category_name'] ?? 'Laporan';
             $title = $row['title'] ?? '';
-            $wa_msg = "Assalamu’alaikum\n\nTerdapat laporan warga baru dari *{$nama}* mengenai *{$cat}*:\n_{$title}_\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat laporan warga baru dari *{$nama}* mengenai *{$cat}*:\n_{$title}_\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -133,7 +133,7 @@ class Feedback extends MY_Controller
                 $nama = $person['full_name'] ?? 'Warga';
                 $cat = $fb['category_name'] ?? 'Laporan';
                 $msg_text = $in['message'] ?? '';
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat tanggapan dari pengurus terkait laporan Anda mengenai *{$cat}*:\n_{$msg_text}_\n\nSilakan cek layanan SIS Paguyuban untuk detail lebih lanjut.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerdapat tanggapan dari pengurus terkait laporan Anda mengenai *{$cat}*:\n_{$msg_text}_\n\nSilakan cek layanan SIS Harmoni untuk detail lebih lanjut.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }
@@ -170,7 +170,7 @@ class Feedback extends MY_Controller
             if ($person && !empty($person['phone'])) {
                 $nama = $person['full_name'] ?? 'Warga';
                 $cat = $fb['category_name'] ?? 'Laporan';
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nLaporan Anda mengenai *{$cat}* telah diselesaikan oleh pengurus. Terima kasih atas partisipasi dan laporannya.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nLaporan Anda mengenai *{$cat}* telah diselesaikan oleh pengurus. Terima kasih atas partisipasi dan laporannya.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }

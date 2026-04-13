@@ -10,6 +10,7 @@ class Events extends MY_Controller
         $this->as_api();
         $this->require_auth();
         $this->load->model('Event_model', 'EventModel');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -55,6 +56,13 @@ class Events extends MY_Controller
             $title = 'Tanpa judul';
         }
         audit_log($this, 'Menambahkan kegiatan', 'Menambahkan kegiatan baru "' . $title . '"');
+
+        $this->push_notification->send_to_all(
+            'Kegiatan warga baru',
+            $title,
+            '/community/events/' . $id,
+            ['type' => 'event_created', 'event_id' => (string)$id]
+        );
 
         api_ok($this->EventModel->find_by_id($id), null, 201);
     }

@@ -1,6 +1,6 @@
 {
-  "name": "sis-paguyuban/backend",
-  "description": "SIS Paguyuban Backend (CodeIgniter 3)",
+  "name": "sis-harmoni/backend",
+  "description": "SIS Harmoni Backend (CodeIgniter 3)",
   "type": "project",
   "require": {
     "php": ">=7.4",
@@ -9,7 +9,7 @@
   },
   "autoload": {
     "psr-4": {
-      "SisPaguyuban\\": "application/"
+      "SisHarmoni\\": "application/"
     }
   }
 }

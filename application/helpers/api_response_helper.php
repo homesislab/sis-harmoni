@@ -2,7 +2,7 @@
 defined('BASEPATH') OR exit('No direct script access allowed');
 
 /**
- * SIS Paguyuban API Response Helper
+ * SIS Harmoni API Response Helper
  * Standard:
  *  - Success: { ok:true, data:..., meta? }
  *  - Error  : { ok:false, error:{ code, message, fields? } }

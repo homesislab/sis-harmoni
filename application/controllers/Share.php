@@ -20,6 +20,9 @@ class Share extends CI_Controller
     {
         $origin = trim((string) $this->input->get('open_app', true));
         if ($origin === '') {
+            $origin = trim((string) getenv('SIS_HARMONI_APP_URL'));
+        }
+        if ($origin === '') {
             return null;
         }
 
@@ -42,10 +45,23 @@ class Share extends CI_Controller
         $this->load->view('share_page', $payload);
     }
 
+    private function render_missing_page(string $eyebrow, string $title = 'Link belum tersedia'): void
+    {
+        $this->render_page([
+            'title' => $title,
+            'description' => 'Link ini akan diarahkan ke SIS Harmoni untuk melihat detail terbaru.',
+            'image' => absolute_url('assets/favicon/web-app-manifest-512x512.png'),
+            'meta_url' => current_url(),
+            'eyebrow' => $eyebrow,
+            'meta_lines' => [],
+            'body' => 'Detail konten belum tersedia di halaman preview.',
+        ]);
+    }
+
     public function event(string $slug = ''): void
     {
         $row = $this->EventModel->find_public_by_slug($slug);
-        if (!$row) show_404();
+        if (!$row) { $this->render_missing_page('Kegiatan Warga', 'Kegiatan tidak ditemukan'); return; }
         $this->render_page([
             'title' => $row['title'] ?? 'Kegiatan',
             'description' => $row['description'] ?? 'Detail kegiatan warga.',
@@ -63,7 +79,7 @@ class Share extends CI_Controller
     public function post(string $slug = ''): void
     {
         $row = $this->PostModel->find_public_by_slug($slug);
-        if (!$row || ($row['status'] ?? '') !== 'published') show_404();
+        if (!$row || ($row['status'] ?? '') !== 'published') { $this->render_missing_page('Info Warga', 'Info tidak ditemukan'); return; }
         $this->render_page([
             'title' => $row['title'] ?? 'Info Warga',
             'description' => $row['content'] ?? 'Detail informasi warga.',
@@ -81,7 +97,7 @@ class Share extends CI_Controller
     public function fundraiser(string $slug = ''): void
     {
         $row = $this->FundraiserModel->find_public_by_slug($slug);
-        if (!$row) show_404();
+        if (!$row) { $this->render_missing_page('Program Donasi', 'Program donasi tidak ditemukan'); return; }
         $this->render_page([
             'title' => $row['title'] ?? 'Program Donasi',
             'description' => $row['description'] ?? 'Detail program donasi warga.',
@@ -99,7 +115,7 @@ class Share extends CI_Controller
     public function business(string $slug = ''): void
     {
         $row = $this->BusinessModel->find_public_by_slug($slug);
-        if (!$row || ($row['status'] ?? '') !== 'active') show_404();
+        if (!$row || ($row['status'] ?? '') !== 'active') { $this->render_missing_page('Usaha Warga', 'Usaha tidak ditemukan'); return; }
         $products = $this->ProductModel->list_by_business((int)$row['id'], 'active');
         $firstProduct = $products[0] ?? [];
         $this->render_page([
@@ -119,7 +135,7 @@ class Share extends CI_Controller
     public function meeting_minute(string $slug = ''): void
     {
         $row = $this->MinutesModel->find_public_by_slug($slug);
-        if (!$row || ($row['status'] ?? '') !== 'published') show_404();
+        if (!$row || ($row['status'] ?? '') !== 'published') { $this->render_missing_page('Notulen Rapat', 'Notulen tidak ditemukan'); return; }
         $this->render_page([
             'title' => $row['title'] ?? 'Notulen Rapat',
             'description' => $row['summary'] ?? 'Ringkasan hasil rapat warga.',

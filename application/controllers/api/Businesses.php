@@ -12,6 +12,7 @@ class Businesses extends MY_Controller
         $this->load->model('Local_business_model', 'BusinessModel');
         $this->load->model('Local_product_model', 'ProductModel');
         $this->load->library('whatsapp');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -98,7 +99,7 @@ class Businesses extends MY_Controller
                 }
             }
             $bizName = $payload['name'] ?? 'Lapak/UMKM';
-            $wa_msg = "Assalamu’alaikum\n\nTerdapat pengajuan UMKM/Lapak baru dengan data:\nNama Pemilik: *{$nama}*\nNama Lapak: *{$bizName}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat pengajuan UMKM/Lapak baru dengan data:\nNama Pemilik: *{$nama}*\nNama Lapak: *{$bizName}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
             $this->whatsapp->send_message($admin_wa, $wa_msg);
         }
 
@@ -179,6 +180,13 @@ class Businesses extends MY_Controller
             'approved_at' => date('Y-m-d H:i:s'),
         ]);
 
+        $this->push_notification->send_to_all(
+            'Usaha warga baru',
+            trim((string)($row['name'] ?? 'Usaha warga')),
+            '/market/businesses/' . $id,
+            ['type' => 'business_active', 'business_id' => (string)$id]
+        );
+
         // Send WA Notification
         $person_id = (int)($row['owner_person_id'] ?? 0);
         if ($person_id) {
@@ -186,7 +194,7 @@ class Businesses extends MY_Controller
             if ($person && !empty($person['phone'])) {
                 $nama = $person['full_name'] ?? 'Warga';
                 $bizName = $row['name'] ?? 'Lapak/UMKM';
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, pengajuan lapak *{$bizName}* Anda telah disetujui.\nSilakan mulai menggunakan layanan pengelolaan lapak yang tersedia.\n\nSemoga usahanya senantiasa dilancarkan dan membawa kesuksesan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nAlhamdulillah, pengajuan lapak *{$bizName}* Anda telah disetujui.\nSilakan mulai menggunakan layanan pengelolaan lapak yang tersedia.\n\nSemoga usahanya senantiasa dilancarkan dan membawa kesuksesan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }
@@ -228,7 +236,7 @@ class Businesses extends MY_Controller
             if ($person && !empty($person['phone'])) {
                 $nama = $person['full_name'] ?? 'Warga';
                 $bizName = $row['name'] ?? 'Lapak/UMKM';
-                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas pengajuan lapak *{$bizName}* yang telah disampaikan.\nUntuk saat ini, pengajuan tersebut belum dapat diproses (Perlu Perbaikan) dengan alasan berikut:\n\n{$reason}\n\nSilakan diperbaiki datanya, atau dikomunikasikan dengan pengurus apabila diperlukan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Paguyuban";
+                $wa_msg = "Assalamu’alaikum, {$nama}\n\nTerima kasih atas pengajuan lapak *{$bizName}* yang telah disampaikan.\nUntuk saat ini, pengajuan tersebut belum dapat diproses (Perlu Perbaikan) dengan alasan berikut:\n\n{$reason}\n\nSilakan diperbaiki datanya, atau dikomunikasikan dengan pengurus apabila diperlukan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
                 $this->whatsapp->send_message($person['phone'], $wa_msg);
             }
         }
@@ -292,7 +300,8 @@ class Businesses extends MY_Controller
             return;
         }
 
-        $status = (!$can_review && !$is_owner) ? 'active' : null; // null = all
+        $requestedStatus = $this->input->get('status') ? (string)$this->input->get('status') : null;
+        $status = (!$can_review && !$is_owner) ? 'active' : $requestedStatus; // null = all
         $items = $this->ProductModel->list_by_business($id, $status);
         api_ok(['items' => $items]);
     }

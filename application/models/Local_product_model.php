@@ -27,20 +27,39 @@ class Local_product_model extends MY_Model
     {
         $offset = ($page - 1) * $per;
 
-        $qb = $this->db->from($this->table);
+        $qb = $this->db
+            ->from($this->table . ' p')
+            ->join('local_businesses b', 'b.id = p.business_id', 'left');
 
         if (!empty($filters['business_id'])) {
-            $qb->where('business_id', (int)$filters['business_id']);
+            $qb->where('p.business_id', (int)$filters['business_id']);
         }
 
         if (!empty($filters['status'])) {
-            $qb->where('status', (string)$filters['status']);
+            $qb->where('p.status', (string)$filters['status']);
+        }
+
+        if (!empty($filters['business_status'])) {
+            $qb->where('b.status', (string)$filters['business_status']);
+        }
+
+        if (!empty($filters['q'])) {
+            $q = trim((string)$filters['q']);
+            if ($q !== '') {
+                $qb->group_start()
+                    ->like('p.name', $q)
+                    ->or_like('p.description', $q)
+                    ->or_like('b.name', $q)
+                    ->or_like('b.category', $q)
+                ->group_end();
+            }
         }
 
         $total = (int)$qb->count_all_results('', false);
 
         $items = $qb
-            ->order_by('id', 'DESC')
+            ->select('p.*, b.name AS business_name, b.category AS business_category, b.status AS business_status')
+            ->order_by('p.id', 'DESC')
             ->limit($per, $offset)
             ->get()
             ->result_array();

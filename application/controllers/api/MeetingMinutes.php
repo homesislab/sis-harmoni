@@ -11,6 +11,7 @@ class MeetingMinutes extends MY_Controller
         $this->require_auth();
         $this->load->model('Meeting_minute_model', 'MinutesModel');
         $this->load->model('Meeting_action_item_model', 'ActionItemModel');
+        $this->load->library('push_notification');
     }
 
     public function index(): void
@@ -57,7 +58,17 @@ class MeetingMinutes extends MY_Controller
         $payload = $in;
         $payload['created_by'] = (int)$this->auth_user['id'];
         $id = $this->MinutesModel->create($payload);
-        api_ok($this->MinutesModel->find_by_id($id), null, 201);
+        $next = $this->MinutesModel->find_by_id($id);
+        if (($next['status'] ?? '') === 'published') {
+            $slug = function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : (string)$id;
+            $this->push_notification->send_to_all(
+                'Notulen rapat baru',
+                trim((string)($next['title'] ?? 'Notulen rapat')),
+                '/share/notulen/' . $slug,
+                ['type' => 'meeting_minute_published', 'meeting_minute_id' => (string)$id]
+            );
+        }
+        api_ok($next, null, 201);
     }
 
     public function show(int $id = 0): void
@@ -101,8 +112,19 @@ class MeetingMinutes extends MY_Controller
         if (isset($in['decisions']) && is_array($in['decisions'])) {
             $in['decisions'] = implode("\n", array_map('strval', $in['decisions']));
         }
+        $wasPublished = (($row['status'] ?? '') === 'published');
         $this->MinutesModel->update($id, $in);
-        api_ok($this->MinutesModel->find_by_id($id));
+        $next = $this->MinutesModel->find_by_id($id);
+        if (!$wasPublished && (($next['status'] ?? '') === 'published')) {
+            $slug = function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : (string)$id;
+            $this->push_notification->send_to_all(
+                'Notulen rapat baru',
+                trim((string)($next['title'] ?? 'Notulen rapat')),
+                '/share/notulen/' . $slug,
+                ['type' => 'meeting_minute_published', 'meeting_minute_id' => (string)$id]
+            );
+        }
+        api_ok($next);
     }
 
     public function destroy(int $id = 0): void

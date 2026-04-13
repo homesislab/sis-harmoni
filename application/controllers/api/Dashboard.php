@@ -1463,16 +1463,24 @@ class Dashboard extends MY_Controller
             $bizActive = (int)$qb->count_all_results();
             $this->db->reset_query();
 
-            $qb = $this->db->from('local_products')->where('status', 'active');
+            $qb = $this->db
+                ->from('local_products p')
+                ->join('local_businesses b', 'b.id = p.business_id', 'left')
+                ->where('p.status', 'active')
+                ->where('b.status', 'active');
             if ($filterProdByOrg) {
-                $qb->where('org_unit_id', $orgUnitId);
+                $qb->where('p.org_unit_id', $orgUnitId);
             }
             $prodActive = (int)$qb->count_all_results();
             $this->db->reset_query();
 
-            $qb = $this->db->from('local_products');
+            $qb = $this->db
+                ->from('local_products p')
+                ->join('local_businesses b', 'b.id = p.business_id', 'left')
+                ->where('p.status', 'active')
+                ->where('b.status', 'active');
             if ($filterProdByOrg) {
-                $qb->where('org_unit_id', $orgUnitId);
+                $qb->where('p.org_unit_id', $orgUnitId);
             }
             $prodTotal = (int)$qb->count_all_results();
             $this->db->reset_query();
@@ -1486,7 +1494,8 @@ class Dashboard extends MY_Controller
             $this->db->reset_query();
 
             $qb = $this->db->select('id, name, category, status, created_at')
-                ->from('local_businesses');
+                ->from('local_businesses')
+                ->where('status', 'active');
             if ($filterBizByOrg) {
                 $qb->where('org_unit_id', $orgUnitId);
             }
