@@ -15,6 +15,7 @@ class Onboarding extends MY_Controller
         $this->load->model('User_model', 'UserModel');
         $this->load->model('House_claim_model', 'HouseClaimModel');
         $this->load->model('Vehicle_model', 'VehicleModel');
+        $this->load->library('whatsapp');
     }
 
     public function units(): void
@@ -315,6 +316,8 @@ class Onboarding extends MY_Controller
                 return;
             }
 
+            $this->notify_registration_submitted($headPersonId, $householdId, $units);
+
             api_ok([
                 'user_id' => $userId,
                 'person_id' => $headPersonId,
@@ -325,6 +328,54 @@ class Onboarding extends MY_Controller
         } catch (Throwable $e) {
             $this->db->trans_rollback();
             api_error('VALIDATION', $e->getMessage(), 422);
+        }
+    }
+
+    private function notify_registration_submitted(int $person_id, int $household_id, array $units): void
+    {
+        try {
+            $admin_wa = $this->whatsapp->get_group_pengurus();
+            if (!$admin_wa) {
+                return;
+            }
+
+            $person = $this->db
+                ->select('full_name, phone')
+                ->from('persons')
+                ->where('id', $person_id)
+                ->get()
+                ->row_array();
+
+            $unitCodes = [];
+            foreach ($units as $u) {
+                if (!is_array($u)) {
+                    continue;
+                }
+                $houseId = (int)($u['house_id'] ?? 0);
+                if ($houseId <= 0) {
+                    continue;
+                }
+
+                $house = $this->db
+                    ->select('code')
+                    ->from('houses')
+                    ->where('id', $houseId)
+                    ->get()
+                    ->row_array();
+
+                if (!empty($house['code'])) {
+                    $unitCodes[] = $house['code'];
+                }
+            }
+
+            $nama = $person['full_name'] ?? 'Warga';
+            $phone = $person['phone'] ?? '-';
+            $unitText = $unitCodes ? implode(', ', array_values(array_unique($unitCodes))) : '-';
+
+            $wa_msg = "Assalamu’alaikum\n\nTerdapat pendaftaran warga baru yang masuk dengan data:\nNama: *{$nama}*\nNo. HP: *{$phone}*\nUnit: *{$unitText}*\nID Pendaftaran: *{$household_id}*\n\nMohon bantuannya untuk dilakukan pengecekan apabila sudah berkenan.\n\n—\nPesan ini dikirim otomatis melalui layanan SIS Harmoni";
+            $this->whatsapp->send_message($admin_wa, $wa_msg);
+        } catch (Throwable $e) {
+            log_message('error', 'Registration WA notification failed: ' . $e->getMessage());
         }
     }
 }
