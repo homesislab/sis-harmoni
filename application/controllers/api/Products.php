@@ -25,6 +25,8 @@ class Products extends MY_Controller
             'status'      => $this->input->get('status') ? (string)$this->input->get('status') : 'active',
             'q'           => $this->input->get('q') ? trim((string)$this->input->get('q')) : null,
             'business_status' => 'active',
+            'order'       => $this->input->get('order') ? trim((string)$this->input->get('order')) : null,
+            'random_seed' => $this->input->get('random_seed') ? (int)$this->input->get('random_seed') : null,
         ];
 
         $res = $this->ProductModel->paginate($page, $per, $filters);

@@ -57,9 +57,16 @@ class Local_product_model extends MY_Model
 
         $total = (int)$qb->count_all_results('', false);
 
+        $qb->select('p.*, b.name AS business_name, b.category AS business_category, b.status AS business_status');
+
+        if (($filters['order'] ?? '') === 'random') {
+            $seed = isset($filters['random_seed']) ? max(1, (int)$filters['random_seed']) : random_int(1, 999999999);
+            $qb->order_by('RAND('.$seed.')', '', false);
+        } else {
+            $qb->order_by('p.id', 'DESC');
+        }
+
         $items = $qb
-            ->select('p.*, b.name AS business_name, b.category AS business_category, b.status AS business_status')
-            ->order_by('p.id', 'DESC')
             ->limit($per, $offset)
             ->get()
             ->result_array();

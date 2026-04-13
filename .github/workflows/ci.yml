@@ -79,6 +79,8 @@ jobs:
             echo "Host ssh.homesislab.my.id"
             echo "  User $SSH_USER"
             echo "  StrictHostKeyChecking no"
+            echo "  ServerAliveInterval 30"
+            echo "  ServerAliveCountMax 10"
             echo "  ProxyCommand cloudflared access ssh --hostname %h --id $CF_ID --secret $CF_SECRET"
           } >> ~/.ssh/config
 
@@ -114,7 +116,8 @@ jobs:
             cd /home/gie/workspace/sis-harmoni
             chmod 600 .env.local
             docker compose down --remove-orphans || true
-            docker compose up -d --build --remove-orphans
+            docker compose build --progress=plain
+            docker compose up -d --remove-orphans
 
             docker compose ps
             docker compose logs --tail=150 app || true

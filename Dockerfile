@@ -16,9 +16,10 @@ COPY . /var/www/html
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
-# CI3 writable dirs
-RUN mkdir -p application/cache application/logs \
-  && chown -R www-data:www-data /var/www/html \
-  && chmod -R 775 application/cache application/logs
+# CI3 writable dirs only. Keep source/vendor ownership unchanged so Docker
+# builds don't spend ages chown-ing the whole application tree.
+RUN mkdir -p application/cache application/logs uploads \
+  && chown -R www-data:www-data application/cache application/logs uploads \
+  && chmod -R 775 application/cache application/logs uploads
 
 EXPOSE 80
