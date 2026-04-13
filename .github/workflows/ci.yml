@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Prepare local env override
+        run: touch .env.local
+
       - name: Build Docker image
         run: docker compose build
 
@@ -59,6 +62,9 @@ jobs:
           CF_ID: ${{ secrets.CF_CLIENT_ID }}
           CF_SECRET: ${{ secrets.CF_CLIENT_SECRET }}
           FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           set -e
 
@@ -78,6 +84,14 @@ jobs:
 
           # Prepare config locally on GitHub Runner
           echo "$FIREBASE_CREDENTIALS" > firebase-service-account.json
+          {
+            echo "SIS_UPLOAD_DRIVER=cloudinary"
+            echo "CLOUDINARY_CLOUD_NAME=$CLOUDINARY_CLOUD_NAME"
+            echo "CLOUDINARY_API_KEY=$CLOUDINARY_API_KEY"
+            echo "CLOUDINARY_API_SECRET=$CLOUDINARY_API_SECRET"
+            echo "CLOUDINARY_FOLDER=sis-harmoni"
+            echo "CLOUDINARY_DELIVERY_TRANSFORM=f_auto,q_auto:eco,c_limit,w_1600"
+          } > .env.local.deploy
 
           # Checkout the latest code and prepare config folder on the remote server
           ssh ssh.homesislab.my.id "bash -lc '
@@ -90,12 +104,15 @@ jobs:
 
           # Safely copy the JSON file using SCP instead of SSH string evaluation
           scp firebase-service-account.json ssh.homesislab.my.id:/home/gie/workspace/sis-harmoni/application/config/firebase-service-account.json
+          scp .env.local.deploy ssh.homesislab.my.id:/home/gie/workspace/sis-harmoni/.env.local
           rm firebase-service-account.json
+          rm .env.local.deploy
 
           # Restart Docker with the newly injected credentials
           ssh ssh.homesislab.my.id "bash -lc '
             set -e
             cd /home/gie/workspace/sis-harmoni
+            chmod 600 .env.local
             docker compose down --remove-orphans || true
             docker compose up -d --build --remove-orphans
 

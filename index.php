@@ -43,6 +43,7 @@ if (is_file($autoload)) {
 	if (class_exists('Dotenv\\Dotenv')) {
 		try {
 			Dotenv\Dotenv::createImmutable(__DIR__)->safeLoad();
+			Dotenv\Dotenv::createMutable(__DIR__, '.env.local')->safeLoad();
 			// Ensure getenv() can read values loaded from .env (CI3 often uses getenv()).
 			if (!empty($_ENV)) {
 				foreach ($_ENV as $k => $v) {

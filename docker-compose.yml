@@ -12,6 +12,7 @@ services:
       - CI_ENV=production
     env_file:
       - .env
+      - .env.local
     networks:
       - shared_apps
     restart: unless-stopped

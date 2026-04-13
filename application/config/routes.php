@@ -342,6 +342,7 @@ $route['api/v1/meeting-action-items/(:num)']['DELETE']           = 'api/MeetingA
  * Uploads
  * ======================================================= */
 $route['api/v1/uploads/image']['POST']                           = 'api/Uploads/image';
+$route['api/v1/uploads/cloudinary-signature']['POST']            = 'api/Uploads/cloudinary_signature';
 
 /* =========================================================
  * Dashboard & Audit Logs
