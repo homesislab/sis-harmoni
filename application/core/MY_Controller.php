@@ -154,6 +154,48 @@ class MY_Controller extends CI_Controller
         }
     }
 
+    protected function optional_auth(): void
+    {
+        $token = api_bearer_token();
+        if (!$token) {
+            return;
+        }
+
+        $claims = $this->authtoken->verify($token);
+        if (!$claims || !is_array($claims)) {
+            return;
+        }
+
+        $user_id = (int)($claims['user_id'] ?? 0);
+        if ($user_id <= 0) {
+            return;
+        }
+
+        $user = $this->UserModel->find_by_id($user_id);
+        if (!$user || ($user['status'] ?? '') !== 'active') {
+            return;
+        }
+
+        $rbac = $this->rbac->load_for_user($user_id);
+
+        $this->auth_user = $user;
+        $this->auth_roles = $rbac['roles'] ?? ($claims['roles'] ?? []);
+        $this->auth_permissions = $rbac['permissions'] ?? ($claims['permissions'] ?? []);
+        $this->auth_allowed_orgs = $rbac['allowed_orgs'] ?? ($claims['allowed_orgs'] ?? ['paguyuban', 'dkm']);
+        $this->auth_org_scope = $rbac['org_scope'] ?? ($claims['org_scope'] ?? 'all');
+
+        $pid = (int)($user['person_id'] ?? 0);
+        if ($pid > 0) {
+            $hhid = $this->UserModel->resolve_household_id_by_person($pid);
+            $this->auth_household_id = $hhid ?: null;
+
+            if ($hhid) {
+                $hid = $this->UserModel->resolve_house_id_by_household($hhid);
+                $this->auth_house_id = $hid ?: null;
+            }
+        }
+    }
+
     protected function require_role(array $roles): void
     {
         foreach ($roles as $r) {

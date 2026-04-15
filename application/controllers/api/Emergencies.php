@@ -195,6 +195,14 @@ class Emergencies extends MY_Controller
 
         $title = "🚨 PANIC: {$label} 🚨";
         $body = "Lokasi: {$loc_text}\nBuka aplikasi sekarang untuk info lanjut.";
+        $targetUrl = '/home?' . http_build_query([
+            'panic' => '1',
+            'emergency_type' => (string)$emergency['type'],
+            'location_text' => $loc_text,
+            'reporter_name' => $reporter_name,
+            'unit_str' => $unit_str,
+            'emergency_id' => (string)$emergency['id'],
+        ]);
 
         log_message('error', "FCM Trace: Payload ready. Title: [{$title}]. Attempting Firebase SDK load.");
 
@@ -216,6 +224,8 @@ class Emergencies extends MY_Controller
                             'location_text' => $loc_text,
                             'reporter_name' => $reporter_name,
                             'unit_str' => $unit_str,
+                            'url' => $targetUrl,
+                            'click_action' => $targetUrl,
                             'timestamp' => (string)time(),
                             'title' => $title,
                             'body' => $body

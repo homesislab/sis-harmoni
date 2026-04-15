@@ -14,9 +14,10 @@ class Share extends CI_Controller
         $this->load->model('Local_business_model', 'BusinessModel');
         $this->load->model('Local_product_model', 'ProductModel');
         $this->load->model('Meeting_minute_model', 'MinutesModel');
+        $this->load->model('Qurban_model', 'QurbanModel');
     }
 
-    private function resolve_app_redirect_url(): ?string
+    private function resolve_app_redirect_url(?string $path_override = null): ?string
     {
         $origin = trim((string) $this->input->get('open_app', true));
         if ($origin === '') {
@@ -34,14 +35,15 @@ class Share extends CI_Controller
         }
 
         $origin = rtrim($scheme . '://' . $host . (!empty($parts['port']) ? ':' . $parts['port'] : ''), '/');
-        $path = parse_url((string) current_url(), PHP_URL_PATH) ?: '/';
+        $path = $path_override ?: (parse_url((string) current_url(), PHP_URL_PATH) ?: '/');
+        $path = '/' . ltrim($path, '/');
 
         return $origin . $path;
     }
 
     private function render_page(array $payload): void
     {
-        $payload['app_redirect_url'] = $this->resolve_app_redirect_url();
+        $payload['app_redirect_url'] = $this->resolve_app_redirect_url($payload['app_redirect_path'] ?? null);
         $this->load->view('share_page', $payload);
     }
 
@@ -79,7 +81,15 @@ class Share extends CI_Controller
     public function post(string $slug = ''): void
     {
         $row = $this->PostModel->find_public_by_slug($slug);
-        if (!$row || ($row['status'] ?? '') !== 'published') { $this->render_missing_page('Info Warga', 'Info tidak ditemukan'); return; }
+        if (!$row || ($row['status'] ?? '') !== 'published') {
+            $draft = method_exists($this->PostModel, 'find_any_by_slug') ? $this->PostModel->find_any_by_slug($slug) : null;
+            if ($draft && ($draft['status'] ?? '') !== 'published') {
+                $this->render_missing_page('Info Warga', 'Info belum dipublikasikan');
+                return;
+            }
+            $this->render_missing_page('Info Warga', 'Info tidak ditemukan');
+            return;
+        }
         $this->render_page([
             'title' => $row['title'] ?? 'Info Warga',
             'description' => $row['content'] ?? 'Detail informasi warga.',
@@ -147,6 +157,69 @@ class Share extends CI_Controller
                 $row['location_text'] ?? null,
             ])),
             'body' => $row['summary'] ?? '',
+        ]);
+    }
+
+    public function qurban(): void
+    {
+        $period = $this->QurbanModel->active_period();
+        if (!$period) {
+            $this->render_page([
+                'title' => 'Qurban SIS Harmoni',
+                'description' => 'Informasi pendaftaran qurban warga akan tampil saat periode qurban dibuka.',
+                'image' => absolute_url('assets/favicon/web-app-manifest-512x512.png'),
+                'meta_url' => current_url(),
+                'eyebrow' => 'Qurban Warga',
+                'meta_lines' => [],
+                'body' => 'Periode qurban belum dibuka.',
+                'app_redirect_path' => '/services/qurban',
+            ]);
+            return;
+        }
+
+        $participants = $this->QurbanModel->public_participations((int)$period['id']);
+        $goatParticipants = 0;
+        $cowParticipants = 0;
+        $selfBroughtParticipants = 0;
+        $cowGroups = [];
+        foreach ($participants as $item) {
+            $type = (string)($item['animal_type'] ?? '');
+            $isSelfBrought = ($item['package_type'] ?? '') === 'self_brought';
+            $isCow = $type === 'cow' && !$isSelfBrought;
+            if ($isCow) {
+                $cowParticipants++;
+                $groupNo = (int)($item['group_no'] ?? 1);
+                $cowGroups[((int)($item['animal_id'] ?? 0)) . ':' . $groupNo] = true;
+            } elseif ($isSelfBrought) {
+                $selfBroughtParticipants++;
+            } else {
+                $goatParticipants++;
+            }
+        }
+
+        $startsAt = !empty($period['starts_at']) ? date('d M Y', strtotime($period['starts_at'])) : null;
+        $endsAt = !empty($period['ends_at']) ? date('d M Y', strtotime($period['ends_at'])) : null;
+        $periodLine = trim(($startsAt ?: '') . (($startsAt && $endsAt) ? ' - ' : '') . ($endsAt ?: ''));
+        $description = trim(strip_tags((string)($period['description'] ?? '')));
+        if ($description === '') {
+            $description = 'Pendaftaran qurban warga sudah bisa dilihat lewat SIS Harmoni.';
+        }
+
+        $this->render_page([
+            'title' => $period['name'] ?? 'Qurban SIS Harmoni',
+            'description' => $description,
+            'image' => absolute_url('assets/favicon/web-app-manifest-512x512.png'),
+            'meta_url' => current_url(),
+            'eyebrow' => 'Qurban Warga',
+            'meta_lines' => array_values(array_filter([
+                $periodLine ?: null,
+                'Kambing ' . $goatParticipants . ' peserta',
+                'Sapi ' . count($cowGroups) . ' kelompok',
+                $cowParticipants > 0 ? $cowParticipants . ' peserta sapi' : null,
+                $selfBroughtParticipants > 0 ? 'Bawa sendiri ' . $selfBroughtParticipants . ' peserta' : null,
+            ])),
+            'body' => $description,
+            'app_redirect_path' => '/services/qurban',
         ]);
     }
 }

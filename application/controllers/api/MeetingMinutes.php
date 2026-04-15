@@ -60,7 +60,7 @@ class MeetingMinutes extends MY_Controller
         $id = $this->MinutesModel->create($payload);
         $next = $this->MinutesModel->find_by_id($id);
         if (($next['status'] ?? '') === 'published') {
-            $slug = function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : (string)$id;
+            $slug = (string)$id . '-' . (function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : 'notulen-rapat');
             $this->push_notification->send_to_all(
                 'Notulen rapat baru',
                 trim((string)($next['title'] ?? 'Notulen rapat')),
@@ -116,7 +116,7 @@ class MeetingMinutes extends MY_Controller
         $this->MinutesModel->update($id, $in);
         $next = $this->MinutesModel->find_by_id($id);
         if (!$wasPublished && (($next['status'] ?? '') === 'published')) {
-            $slug = function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : (string)$id;
+            $slug = (string)$id . '-' . (function_exists('slugify_text') ? slugify_text($next['title'] ?? 'notulen-rapat') : 'notulen-rapat');
             $this->push_notification->send_to_all(
                 'Notulen rapat baru',
                 trim((string)($next['title'] ?? 'Notulen rapat')),

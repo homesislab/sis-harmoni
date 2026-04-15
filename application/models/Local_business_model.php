@@ -23,6 +23,15 @@ class Local_business_model extends MY_Model
 
     public function find_public_by_slug(string $slug): ?array
     {
+        $id = function_exists('share_id_from_slug') ? share_id_from_slug($slug) : 0;
+        if ($id > 0) {
+            $row = $this->find_by_id($id);
+            if ($row && ($row['status'] ?? '') === 'active') {
+                return $row;
+            }
+            return null;
+        }
+
         $items = $this->db
             ->select('id, name')
             ->from($this->table)

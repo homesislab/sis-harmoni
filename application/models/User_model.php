@@ -76,8 +76,10 @@ class User_model extends MY_Model
         $personId = (int)($user['person_id'] ?? 0);
         $householdId = $personId > 0 ? $this->resolve_household_id_by_person($personId) : null;
         $houseId = $householdId ? $this->resolve_house_id_by_household((int)$householdId) : null;
+        $house = $houseId ? $this->db->select('id, code, block, number')->from('houses')->where('id', (int)$houseId)->get()->row_array() : null;
         $user['household_id'] = $householdId ? (int)$householdId : null;
         $user['house_id'] = $houseId ? (int)$houseId : null;
+        $user['house_code'] = $house ? ($house['code'] ?: trim((string)($house['block'] ?? '') . '-' . (string)($house['number'] ?? ''), '-')) : null;
 
         $role_codes = $rbac['roles'] ?? [];
         $roles_out = $role_codes;
@@ -110,6 +112,7 @@ class User_model extends MY_Model
             'org_scope' => $rbac['org_scope'] ?? 'all',
             'household_id' => $user['household_id'],
             'house_id' => $user['house_id'],
+            'house_code' => $user['house_code'],
         ];
     }
 

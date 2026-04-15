@@ -71,6 +71,11 @@ class Event_model extends MY_Model
 
     public function find_public_by_slug(string $slug): ?array
     {
+        $id = function_exists('share_id_from_slug') ? share_id_from_slug($slug) : 0;
+        if ($id > 0) {
+            return $this->find_by_id($id);
+        }
+
         $items = $this->db->select('id, title')->from('events')->get()->result_array();
         foreach ($items as $item) {
             if (slugify_text($item['title'] ?? '') === $slug) {

@@ -42,18 +42,18 @@ class Vehicles extends MY_Controller
     {
         $in = $this->json_input();
 
-        $err = $this->VehicleModel->validate_payload($in, true);
-        if ($err) {
-            api_validation_error($err);
-            return;
-        }
-
         if (!$this->has_permission('app.services.master.vehicles.manage')) {
             if (empty($this->auth_user['person_id'])) {
                 api_error('FORBIDDEN', 'Akun tidak terhubung ke data warga', 403);
                 return;
             }
             $in['person_id'] = (int)$this->auth_user['person_id'];
+        }
+
+        $err = $this->VehicleModel->validate_payload($in, true);
+        if ($err) {
+            api_validation_error($err);
+            return;
         }
 
         if ($this->VehicleModel->exists_person_plate((int)$in['person_id'], $in['plate_number'])) {

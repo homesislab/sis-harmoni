@@ -163,6 +163,21 @@ if (!function_exists('slugify_text')) {
     }
 }
 
+if (!function_exists('share_id_from_slug')) {
+    function share_id_from_slug(?string $slug): int
+    {
+        $slug = trim((string)$slug);
+        if ($slug === '') return 0;
+        if (preg_match('/^(\d+)(?:\-|$)/', $slug, $m)) {
+            return (int)$m[1];
+        }
+        if (preg_match('/\-(\d+)$/', $slug, $m)) {
+            return (int)$m[1];
+        }
+        return 0;
+    }
+}
+
 if (!function_exists('absolute_url')) {
     function absolute_url(?string $value): ?string
     {

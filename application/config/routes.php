@@ -32,6 +32,7 @@ $route['api/v1/auth/login']['POST']   = 'api/Auth/login';
 $route['api/v1/auth/refresh']['POST'] = 'api/Auth/refresh';
 $route['api/v1/auth/me']['GET']       = 'api/Auth/me';
 $route['api/v1/auth/me']['PUT']       = 'api/Auth/update_me';
+$route['api/v1/auth/impersonate']['POST'] = 'api/Auth/impersonate';
 $route['api/v1/auth/logout']['POST']  = 'api/Auth/logout';
 $route['api/v1/fcm/token']['POST']    = 'api/Fcm/token';
 $route['api/v1/fcm/token']['DELETE']  = 'api/Fcm/destroy_token';
@@ -216,6 +217,24 @@ $route['api/v1/fundraisers/updates/(:num)']['PUT']              = 'api/Fundraise
 $route['api/v1/fundraisers/updates/(:num)']['DELETE']           = 'api/FundraiserUpdates/destroy/$1';
 
 /* =========================================================
+ * Qurban
+ * ======================================================= */
+$route['api/v1/qurban']['GET']                                      = 'api/Qurbans/index';
+$route['api/v1/qurban/active']['GET']                               = 'api/Qurbans/active';
+$route['api/v1/qurban/periods']['POST']                             = 'api/Qurbans/store_period';
+$route['api/v1/qurban/periods/(:num)']['PUT']                       = 'api/Qurbans/update_period/$1';
+$route['api/v1/qurban/animals']['POST']                             = 'api/Qurbans/store_animal';
+$route['api/v1/qurban/animals/(:num)']['PUT']                       = 'api/Qurbans/update_animal/$1';
+$route['api/v1/qurban/animals/(:num)/participate']['POST']          = 'api/Qurbans/participate/$1';
+$route['api/v1/qurban/animals/(:num)/manual-participation']['POST'] = 'api/Qurbans/manual_participation/$1';
+$route['api/v1/qurban/participations']['GET']                       = 'api/Qurbans/participations';
+$route['api/v1/qurban/participations/(:num)']['PUT']                = 'api/Qurbans/update_participation/$1';
+$route['api/v1/qurban/participations/(:num)/cancel']['POST']        = 'api/Qurbans/cancel_participation/$1';
+$route['api/v1/qurban/participations/(:num)/payment']['POST']       = 'api/Qurbans/submit_payment/$1';
+$route['api/v1/qurban/participations/(:num)/approve']['POST']       = 'api/Qurbans/approve_payment/$1';
+$route['api/v1/qurban/participations/(:num)/reject']['POST']        = 'api/Qurbans/reject_payment/$1';
+
+/* =========================================================
  * Security
  * ======================================================= */
 $route['api/v1/security/guards']['GET']                         = 'api/SecurityGuards/index';
@@ -334,6 +353,7 @@ $route['share/info/(:any)']['GET']                               = 'Share/post/$
 $route['share/donasi/(:any)']['GET']                             = 'Share/fundraiser/$1';
 $route['share/usaha/(:any)']['GET']                              = 'Share/business/$1';
 $route['share/notulen/(:any)']['GET']                            = 'Share/meeting_minute/$1';
+$route['share/qurban']['GET']                                    = 'Share/qurban';
 
 $route['api/v1/meeting-action-items/(:num)']['PUT']              = 'api/MeetingActionItems/update/$1';
 $route['api/v1/meeting-action-items/(:num)']['DELETE']           = 'api/MeetingActionItems/destroy/$1';
