@@ -1,19 +1,33 @@
 <!doctype html>
+<?php
+$__raw_description = (string)($meta_description ?? $description ?? '');
+$__meta_description = html_entity_decode($__raw_description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+$__meta_description = preg_replace('/<(br|\/p|\/div|\/li|\/h[1-6])\b[^>]*>/i', ' ', $__meta_description);
+$__meta_description = trim(preg_replace('/\s+/u', ' ', strip_tags($__meta_description)));
+if ($__meta_description === '') {
+    $__meta_description = 'Info terbaru tersedia di SIS Harmoni.';
+}
+if (function_exists('mb_strlen') && mb_strlen($__meta_description, 'UTF-8') > 180) {
+    $__meta_description = rtrim(mb_substr($__meta_description, 0, 177, 'UTF-8')) . '...';
+} elseif (!function_exists('mb_strlen') && strlen($__meta_description) > 180) {
+    $__meta_description = rtrim(substr($__meta_description, 0, 177)) . '...';
+}
+?>
 <html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= html_escape($title) ?> | SIS Harmoni</title>
-    <meta name="description" content="<?= html_escape($description) ?>">
+    <meta name="description" content="<?= html_escape($__meta_description) ?>">
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="SIS Harmoni">
     <meta property="og:title" content="<?= html_escape($title) ?>">
-    <meta property="og:description" content="<?= html_escape($description) ?>">
+    <meta property="og:description" content="<?= html_escape($__meta_description) ?>">
     <meta property="og:url" content="<?= html_escape($meta_url) ?>">
     <meta property="og:image" content="<?= html_escape($image) ?>">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= html_escape($title) ?>">
-    <meta name="twitter:description" content="<?= html_escape($description) ?>">
+    <meta name="twitter:description" content="<?= html_escape($__meta_description) ?>">
     <meta name="twitter:image" content="<?= html_escape($image) ?>">
     <?php if (!empty($app_redirect_url)): ?>
         <link rel="canonical" href="<?= html_escape($app_redirect_url) ?>">

@@ -44,7 +44,33 @@ class Share extends CI_Controller
     private function render_page(array $payload): void
     {
         $payload['app_redirect_url'] = $this->resolve_app_redirect_url($payload['app_redirect_path'] ?? null);
+        $payload['meta_description'] = $this->preview_text(
+            $payload['meta_description'] ?? ($payload['description'] ?? '')
+        );
+        if ($payload['meta_description'] === '') {
+            $payload['meta_description'] = 'Info terbaru tersedia di SIS Harmoni.';
+        }
         $this->load->view('share_page', $payload);
+    }
+
+    private function preview_text(?string $value, int $maxLength = 180): string
+    {
+        $text = html_entity_decode((string) $value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/<(br|\/p|\/div|\/li|\/h[1-6])\b[^>]*>/i', ' ', $text);
+        $text = trim(preg_replace('/\s+/u', ' ', strip_tags($text)));
+        if ($text === '') {
+            return '';
+        }
+
+        if (function_exists('mb_strlen') && mb_strlen($text, 'UTF-8') > $maxLength) {
+            return rtrim(mb_substr($text, 0, max(0, $maxLength - 3), 'UTF-8')) . '...';
+        }
+
+        if (!function_exists('mb_strlen') && strlen($text) > $maxLength) {
+            return rtrim(substr($text, 0, max(0, $maxLength - 3))) . '...';
+        }
+
+        return $text;
     }
 
     private function render_missing_page(string $eyebrow, string $title = 'Link belum tersedia'): void
