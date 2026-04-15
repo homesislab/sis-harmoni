@@ -18,6 +18,7 @@ class Whatsapp
     {
         $this->CI =& get_instance();
         
+        $this->base_url   = rtrim($_ENV['WABOT_BASE_URL'] ?? $this->base_url, '/');
         $this->username   = $_ENV['WABOT_USERNAME'] ?? 'admin';
         $this->password   = $_ENV['WABOT_PASSWORD'] ?? 'adminpassword';
         $this->session_id = $_ENV['WABOT_SESSION_ID'] ?? 'homesislab';

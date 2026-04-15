@@ -12,6 +12,10 @@ $route['default_controller'] = 'welcome';
 $route['404_override']       = '';
 $route['translate_uri_dashes'] = FALSE;
 
+$route['admin/offline-residents']['GET'] = 'OfflineResidents/index';
+$route['admin/offline-residents/export']['GET'] = 'OfflineResidents/export';
+$route['admin/offline-residents/send']['POST'] = 'OfflineResidents/send';
+
 /* =========================================================
  * Onboarding / Registration Flow
  * ======================================================= */
