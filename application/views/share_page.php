@@ -1,9 +1,24 @@
 <!doctype html>
 <?php
-$__raw_description = (string)($meta_description ?? $description ?? '');
-$__meta_description = html_entity_decode($__raw_description, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-$__meta_description = preg_replace('/<(br|\/p|\/div|\/li|\/h[1-6])\b[^>]*>/i', ' ', $__meta_description);
-$__meta_description = trim(preg_replace('/\s+/u', ' ', strip_tags($__meta_description)));
+if (!function_exists('__share_plain_text')) {
+    function __share_plain_text($value, bool $preserveBreaks = false): string
+    {
+        $text = html_entity_decode((string)$value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $break = $preserveBreaks ? "\n" : ' ';
+        $text = preg_replace('/<br\s*\/?>/i', $break, $text);
+        $text = preg_replace('/<\/(p|div|h[1-6]|li)>/i', $break, $text);
+        $text = preg_replace('/<li\b[^>]*>/i', $preserveBreaks ? "- " : ' ', $text);
+        $text = strip_tags($text);
+        if ($preserveBreaks) {
+            $text = preg_replace("/[ \t]+/u", ' ', $text);
+            $text = preg_replace("/\n{3,}/u", "\n\n", $text);
+            return trim($text);
+        }
+        return trim(preg_replace('/\s+/u', ' ', $text));
+    }
+}
+
+$__meta_description = __share_plain_text($meta_description ?? $description ?? '', false);
 if ($__meta_description === '') {
     $__meta_description = 'Info terbaru tersedia di SIS Harmoni.';
 }
@@ -12,6 +27,8 @@ if (function_exists('mb_strlen') && mb_strlen($__meta_description, 'UTF-8') > 18
 } elseif (!function_exists('mb_strlen') && strlen($__meta_description) > 180) {
     $__meta_description = rtrim(substr($__meta_description, 0, 177)) . '...';
 }
+
+$__body_text = __share_plain_text($body ?? '', true);
 ?>
 <html lang="id">
 <head>
@@ -175,8 +192,8 @@ if (function_exists('mb_strlen') && mb_strlen($__meta_description, 'UTF-8') > 18
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-                <?php if (!empty($body)): ?>
-                    <div class="body"><?= html_escape($body) ?></div>
+                <?php if ($__body_text !== ''): ?>
+                    <div class="body"><?= html_escape($__body_text) ?></div>
                 <?php endif; ?>
                 <div class="cta">
                     <?php if (!empty($app_redirect_url)): ?>
