@@ -1367,14 +1367,26 @@ class Dashboard extends MY_Controller
             $pollsActive = $this->db->select('id, title, status, start_at, end_at, vote_scope')
                 ->from('polls')
                 ->where('status', 'published')
+                ->where('start_at <=', $now)
+                ->where('end_at >=', $now)
                 ->order_by('id', 'desc')
                 ->limit(10)
                 ->get()->result_array();
 
-            $pollsActiveCount = (int)$this->db->from('polls')->where('status', 'published')->count_all_results();
+            $pollsActiveCount = (int)$this->db->from('polls')
+                ->where('status', 'published')
+                ->where('start_at <=', $now)
+                ->where('end_at >=', $now)
+                ->count_all_results();
+
+            $pollsUpcomingCount = (int)$this->db->from('polls')
+                ->where('status', 'published')
+                ->where('start_at >', $now)
+                ->count_all_results();
 
             $pollParticipation = [];
             $participationRate = 0.0;
+            $pollVotesTotal = 0;
 
             if ($this->db->table_exists('poll_votes') && !empty($pollsActive)) {
                 $useHHFilter = is_array($orgHouseholdIds);
@@ -1409,6 +1421,10 @@ class Dashboard extends MY_Controller
                         ->where('poll_id', $pollId)
                         ->get()->row()->c ?? 0);
 
+                    $totalVotes = (int)$this->db->from('poll_votes')
+                        ->where('poll_id', $pollId)
+                        ->count_all_results();
+
                     $pct = $total > 0 ? round(($votes / $total) * 100, 2) : 0.0;
 
                     $pollParticipation[] = [
@@ -1416,10 +1432,12 @@ class Dashboard extends MY_Controller
                         'title' => (string)($p['title'] ?? 'Polling'),
                         'vote_scope' => $scopePoll,
                         'votes' => $votes,
+                        'total_votes' => $totalVotes,
                         'total' => $total,
                         'percent' => $pct,
                     ];
 
+                    $pollVotesTotal += $totalVotes;
                     $sumPct += $pct;
                     $countPct++;
                 }
@@ -1434,6 +1452,8 @@ class Dashboard extends MY_Controller
                 'posts_count' => count($postsLatest),
                 'polls_active' => $pollsActive,
                 'polls_active_count' => $pollsActiveCount,
+                'polls_upcoming_count' => $pollsUpcomingCount,
+                'poll_votes_total' => $pollVotesTotal,
                 'poll_participation_rate' => $participationRate,
                 'poll_participation' => $pollParticipation,
             ];

@@ -101,6 +101,33 @@ class Poll_model extends MY_Model
             ->limit($per, $offset)
             ->get()->result_array();
 
+        if (!empty($items) && $this->db->table_exists('poll_votes')) {
+            $ids = array_values(array_filter(array_map(static function ($item) {
+                return (int)($item['id'] ?? 0);
+            }, $items)));
+
+            if (!empty($ids)) {
+                $voteRows = $this->db->select('poll_id, COUNT(*) AS total_votes', false)
+                    ->from('poll_votes')
+                    ->where_in('poll_id', $ids)
+                    ->group_by('poll_id')
+                    ->get()->result_array();
+
+                $voteMap = [];
+                foreach ($voteRows as $row) {
+                    $voteMap[(int)$row['poll_id']] = (int)$row['total_votes'];
+                }
+
+                foreach ($items as &$item) {
+                    $totalVotes = $voteMap[(int)($item['id'] ?? 0)] ?? 0;
+                    $item['total_votes'] = $totalVotes;
+                    $item['vote_count'] = $totalVotes;
+                    $item['votes_count'] = $totalVotes;
+                }
+                unset($item);
+            }
+        }
+
         return [
             'items' => $items,
             'meta' => ['page' => $page,'per_page' => $per,'total' => $total],
