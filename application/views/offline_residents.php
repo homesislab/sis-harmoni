@@ -122,7 +122,14 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
             outline: none;
         }
         input, select { min-height: 40px; padding: 0 12px; }
-        textarea { min-height: 150px; padding: 12px; line-height: 1.55; resize: vertical; }
+        textarea {
+            min-height: 320px;
+            padding: 12px;
+            line-height: 1.55;
+            resize: vertical;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+            font-size: 13px;
+        }
         input:focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(15, 143, 109, 0.14); }
         .blast {
             display: grid;
@@ -133,6 +140,20 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
         .blast .panel { padding: 16px; }
         .blast h2, .list h2 { margin: 0 0 8px; font-size: 18px; }
         .hint { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 0; }
+        .format-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 12px 0;
+        }
+        .format-toolbar button {
+            min-height: 34px;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--ink);
+            font-size: 12px;
+            padding: 0 10px;
+        }
         .placeholder {
             display: flex;
             flex-wrap: wrap;
@@ -158,6 +179,33 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
         }
         .send-status.ok { color: var(--green); font-weight: 800; }
         .send-status.fail { color: var(--red); font-weight: 800; }
+        .wa-preview {
+            margin-top: 14px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #f6fbf8;
+            padding: 14px;
+        }
+        .wa-preview-title {
+            margin: 0 0 10px;
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+        }
+        .wa-bubble {
+            max-height: 360px;
+            overflow: auto;
+            border-radius: 8px;
+            background: #fff;
+            border: 1px solid rgba(15, 143, 109, 0.18);
+            padding: 13px;
+            color: #17202a;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
         .blast-side {
             display: grid;
             align-content: start;
@@ -279,7 +327,15 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
         <section class="blast">
             <div class="panel">
                 <h2>Template WhatsApp</h2>
-                <p class="hint">Template tersimpan di browser ini. Placeholder akan diganti otomatis saat tombol WhatsApp dibuka.</p>
+                <p class="hint">WhatsApp memakai format teks: *tebal*, _miring_, ~coret~, dan paragraf dipisah baris kosong. Placeholder akan diganti otomatis sebelum dikirim.</p>
+                <div class="format-toolbar" aria-label="Toolbar format WhatsApp">
+                    <button type="button" data-format="bold">*Tebal*</button>
+                    <button type="button" data-format="italic">_Miring_</button>
+                    <button type="button" data-format="strike">~Coret~</button>
+                    <button type="button" data-format="bullet">Bullet</button>
+                    <button type="button" data-format="quote">Quote</button>
+                    <button type="button" id="useDefaultTemplate">Pakai template aktivasi</button>
+                </div>
                 <textarea id="waTemplate"><?= html_escape($template ?? '') ?></textarea>
                 <div class="placeholder">
                     <span class="chip">{nama}</span>
@@ -295,6 +351,10 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
                     <button class="button-primary" type="button" id="sendAllWa">Kirim semua via wabot</button>
                 </div>
                 <div class="send-status" id="sendStatus">Wabot akan mengirim ke nomor yang belum terdaftar dari hasil filter saat ini.</div>
+                <div class="wa-preview">
+                    <p class="wa-preview-title">Preview pesan</p>
+                    <div class="wa-bubble" id="waPreview"></div>
+                </div>
             </div>
             <div class="panel blast-side">
                 <div>
@@ -396,6 +456,7 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
         const STORAGE_TEMPLATE = 'sis-harmoni-offline-resident-wa-template';
         const templateEl = document.getElementById('waTemplate');
         const sendStatus = document.getElementById('sendStatus');
+        const previewEl = document.getElementById('waPreview');
         const savedTemplate = localStorage.getItem(STORAGE_TEMPLATE);
 
         if (savedTemplate) {
@@ -414,6 +475,48 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
                 .replaceAll('{suami}', row.csv_suami || '')
                 .replaceAll('{istri}', row.csv_istri || '')
                 .replaceAll('{kk}', row.db_kk_number || '');
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function renderWhatsAppPreview(text) {
+            let html = escapeHtml(text);
+            html = html.replace(/\*([^*\n][^*]*?)\*/g, '<strong>$1</strong>');
+            html = html.replace(/_([^_\n][^_]*?)_/g, '<em>$1</em>');
+            html = html.replace(/~([^~\n][^~]*?)~/g, '<s>$1</s>');
+            return html;
+        }
+
+        function updatePreview() {
+            const sample = ROWS.find((row) => row.whatsapp_number) || ROWS[0] || null;
+            previewEl.innerHTML = renderWhatsAppPreview(sample ? messageFor(sample) : templateEl.value);
+        }
+
+        function replaceSelection(before, after, fallback) {
+            const start = templateEl.selectionStart;
+            const end = templateEl.selectionEnd;
+            const selected = templateEl.value.slice(start, end) || fallback;
+            const replacement = before + selected + after;
+            templateEl.setRangeText(replacement, start, end, 'select');
+            templateEl.focus();
+            updatePreview();
+        }
+
+        function prefixSelection(prefix) {
+            const start = templateEl.selectionStart;
+            const end = templateEl.selectionEnd;
+            const selected = templateEl.value.slice(start, end) || 'Tulis poin di sini';
+            const replacement = selected.split('\n').map((line) => prefix + line).join('\n');
+            templateEl.setRangeText(replacement, start, end, 'select');
+            templateEl.focus();
+            updatePreview();
         }
 
         function findRow(unitKey) {
@@ -464,6 +567,23 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
             }
         });
 
+        document.querySelectorAll('[data-format]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const type = button.dataset.format;
+                if (type === 'bold') replaceSelection('*', '*', 'teks tebal');
+                if (type === 'italic') replaceSelection('_', '_', 'teks miring');
+                if (type === 'strike') replaceSelection('~', '~', 'teks coret');
+                if (type === 'bullet') prefixSelection('- ');
+                if (type === 'quote') prefixSelection('> ');
+            });
+        });
+
+        document.getElementById('useDefaultTemplate').addEventListener('click', () => {
+            templateEl.value = DEFAULT_TEMPLATE;
+            localStorage.setItem(STORAGE_TEMPLATE, templateEl.value);
+            updatePreview();
+        });
+
         document.querySelectorAll('.js-send-wa').forEach((button) => {
             button.addEventListener('click', async () => {
                 const row = findRow(button.dataset.unit);
@@ -505,12 +625,16 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
 
         document.getElementById('saveTemplate').addEventListener('click', () => {
             localStorage.setItem(STORAGE_TEMPLATE, templateEl.value);
+            updatePreview();
         });
 
         document.getElementById('resetTemplate').addEventListener('click', () => {
             templateEl.value = DEFAULT_TEMPLATE;
             localStorage.removeItem(STORAGE_TEMPLATE);
+            updatePreview();
         });
+
+        templateEl.addEventListener('input', updatePreview);
 
         document.getElementById('clearContacted').addEventListener('click', () => {
             Object.keys(localStorage)
@@ -549,6 +673,8 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
                 button.textContent = 'Kirim semua via wabot';
             }
         });
+
+        updatePreview();
     </script>
 </body>
 </html>

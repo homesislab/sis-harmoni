@@ -117,13 +117,27 @@ class Offline_resident_model extends CI_Model
     public function default_template(): string
     {
         return trim((string)getenv('OFFLINE_RESIDENT_WA_TEMPLATE')) ?: implode("\n", [
-            'Assalamualaikum Bapak/Ibu {nama},',
+            '*Assalamualaikum Warahmatullahi Wabarakatuh, Bapak/Ibu {nama},*',
             '',
-            'Kami dari admin SIS Harmoni ingin mengingatkan bahwa unit {unit} belum terdaftar di aplikasi SIS Harmoni.',
+            'Mohon maaf sebelumnya jika kami mengganggu waktu istirahat maupun aktivitas Bapak/Ibu sekeluarga.',
             '',
-            'Mohon bantu daftar agar data warga, informasi lingkungan, pembayaran, dan layanan warga bisa terhubung rapi.',
+            'Kami dari *Admin SIS Harmoni* sedang berikhtiar merapikan pendataan warga agar urusan lingkungan kita jadi lebih selaras. Saat ini, sistem kami mencatat unit *{unit}* memerlukan aktivasi data. Karena data yang kami pegang saat ini masih terbatas, kami khawatir Bapak/Ibu melewatkan informasi-informasi penting di lingkungan kita.',
             '',
-            'Terima kasih.',
+            'Aktivasi ini adalah langkah kecil untuk kenyamanan kita bersama, agar Bapak/Ibu bisa langsung menikmati fitur:',
+            '',
+            '- *Transparansi Keuangan:* Memantau iuran, saldo kas, dan laporan keuangan secara terbuka (_real-time_).',
+            '- *Keamanan & Keselamatan:* Akses cepat ke *"Tombol Darurat"* untuk sinyal bantuan instan ke petugas keamanan.',
+            '- *Gotong Royong Digital:* Terhubung dengan program sosial lingkungan dan mengenal usaha mikro milik tetangga sekitar.',
+            '- *Komunikasi Dua Arah:* Menyampaikan saran/masukan secara rapi dan memantau tindak lanjut dari pengurus.',
+            '',
+            'Besar harapan kami Bapak/Ibu berkenan meluangkan waktu sejenak untuk aktivasi melalui tautan berikut:',
+            '',
+            '👉 https://sis-harmoni.vercel.app/register',
+            '',
+            'Mohon maaf jika sebelumnya data sudah pernah diminta, kami hanya ingin memastikan di sistem baru ini tidak ada data warga yang tercecer. Terima kasih banyak atas dukungan Bapak/Ibu dalam mewujudkan lingkungan yang lebih harmoni.',
+            '',
+            '—',
+            'Pesan ini dikirim otomatis melalui layanan SIS Harmoni',
         ]);
     }
 
