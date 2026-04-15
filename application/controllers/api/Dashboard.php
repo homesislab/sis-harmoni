@@ -252,7 +252,13 @@ class Dashboard extends MY_Controller
     {
         $items = [];
         if ($this->db->table_exists('audit_logs')) {
-            $items = $this->db->select('*')->from('audit_logs')->order_by('id', 'desc')->limit(20)->get()->result_array();
+            $userId = (int)($this->auth_user['id'] ?? 0);
+            $items = $this->db->select('*')
+                ->from('audit_logs')
+                ->where('user_id', $userId)
+                ->order_by('id', 'desc')
+                ->limit(20)
+                ->get()->result_array();
         }
         api_ok($items);
     }

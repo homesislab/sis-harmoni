@@ -23,8 +23,12 @@ class AuditLogs extends MY_Controller
         $page = $p['page'];
         $per  = $p['per_page'];
 
+        $canViewAll = $this->has_permission('app.services.settings.rbac.manage');
+        $requestedUserId = $this->input->get('user_id') ? (int)$this->input->get('user_id') : null;
+        $currentUserId = (int)($this->auth_user['id'] ?? 0);
+
         $filters = [
-            'user_id' => $this->input->get('user_id') ? (int)$this->input->get('user_id') : null,
+            'user_id' => ($canViewAll && $requestedUserId > 0) ? $requestedUserId : $currentUserId,
             'action'  => $this->input->get('action') ? (string)$this->input->get('action') : null,
             'from'    => $this->input->get('from') ? (string)$this->input->get('from') : null,
             'to'      => $this->input->get('to') ? (string)$this->input->get('to') : null,
