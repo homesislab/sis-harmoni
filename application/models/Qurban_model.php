@@ -19,11 +19,20 @@ class Qurban_model extends MY_Model
 
     public function active_period(): ?array
     {
+        $now = date('Y-m-d H:i:s');
         $row = $this->db
             ->select('p.*, la.name AS ledger_account_name, la.type AS ledger_account_type')
             ->from('qurban_periods p')
             ->join('ledger_accounts la', 'la.id = p.ledger_account_id', 'left')
             ->where('p.status', 'active')
+            ->group_start()
+                ->where('p.starts_at IS NULL', null, false)
+                ->or_where('p.starts_at <=', $now)
+            ->group_end()
+            ->group_start()
+                ->where('p.ends_at IS NULL', null, false)
+                ->or_where('p.ends_at >=', $now)
+            ->group_end()
             ->order_by('p.year', 'DESC')
             ->order_by('p.id', 'DESC')
             ->limit(1)
