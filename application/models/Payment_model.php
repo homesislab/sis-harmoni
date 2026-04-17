@@ -145,7 +145,6 @@ class Payment_model extends MY_Model
             if ($kw !== '') {
                 $countQ->group_start()
                     ->like('hp.full_name', $kw)
-                    ->or_like('hh.kk_number', $kw)
                     ->or_like('h.block', $kw)
                     ->or_like('h.number', $kw)
                     ->or_like('p.note', $kw)
@@ -195,7 +194,6 @@ class Payment_model extends MY_Model
             if ($kw !== '') {
                 $itemsQ->group_start()
                     ->like('hp.full_name', $kw)
-                    ->or_like('hh.kk_number', $kw)
                     ->or_like('h.block', $kw)
                     ->or_like('h.number', $kw)
                     ->or_like('p.note', $kw)

@@ -103,7 +103,6 @@ class Vehicle_model extends MY_Model
 
         $this->db->select('v.*');
         $this->db->select('hh.id AS household_id');
-        $this->db->select('hh.kk_number');
         $this->db->select('hh.head_person_id');
 
         $this->db->select('h.id AS house_id');

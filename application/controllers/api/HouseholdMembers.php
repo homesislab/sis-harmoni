@@ -40,12 +40,6 @@ class HouseholdMembers extends MY_Controller
                 api_validation_error($errors);
                 return;
             }
-            $nik = trim((string)($person['nik'] ?? ''));
-            if ($nik !== '' && $this->PersonModel->find_by_nik($nik)) {
-                $this->db->trans_rollback();
-                api_conflict('NIK sudah terdaftar');
-                return;
-            }
             $person_id = $this->PersonModel->create($person);
         }
 
@@ -93,14 +87,6 @@ class HouseholdMembers extends MY_Controller
             if ($errors) {
                 api_validation_error($errors);
                 return;
-            }
-            if (isset($person['nik'])) {
-                $nik = trim((string)$person['nik']);
-                $other = $nik !== '' ? $this->PersonModel->find_by_nik($nik) : null;
-                if ($other && (int)$other['id'] !== (int)$member['person_id']) {
-                    api_conflict('NIK sudah terdaftar');
-                    return;
-                }
             }
             $this->PersonModel->update((int)$member['person_id'], $person);
         }

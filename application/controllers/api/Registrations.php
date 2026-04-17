@@ -23,15 +23,13 @@ class Registrations extends MY_Controller
         $q = $this->input->get('q') ? trim((string)$this->input->get('q')) : '';
 
         $qb = $this->db
-            ->select('hh.id, hh.kk_number, hh.created_at, p.full_name AS head_name, p.nik AS head_nik')
+            ->select('hh.id, hh.created_at, p.full_name AS head_name')
             ->from('households hh')
             ->join('persons p', 'p.id = hh.head_person_id', 'inner');
 
         if ($q !== '') {
             $qb->group_start()
-                ->like('hh.kk_number', $q)
-                ->or_like('p.full_name', $q)
-                ->or_like('p.nik', $q)
+                ->like('p.full_name', $q)
             ->group_end();
         }
 
@@ -72,9 +70,7 @@ class Registrations extends MY_Controller
 
             $items[] = [
                 'id' => $hid,
-                'kk_number' => $r['kk_number'],
                 'head_name' => $r['head_name'],
-                'head_nik' => $r['head_nik'],
                 'status' => $derived,
                 'unit_codes' => $unit_codes,
                 'created_at' => $r['created_at'],
@@ -102,7 +98,7 @@ class Registrations extends MY_Controller
         }
 
         $hh = $this->db
-            ->select('hh.*, p.full_name AS head_name, p.nik AS head_nik, p.phone AS head_phone, p.email AS head_email')
+            ->select('hh.*, p.full_name AS head_name, p.phone AS head_phone, p.email AS head_email')
             ->from('households hh')
             ->join('persons p', 'p.id = hh.head_person_id', 'inner')
             ->where('hh.id', $household_id)

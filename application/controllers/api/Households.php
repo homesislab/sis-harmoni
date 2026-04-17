@@ -39,23 +39,14 @@ class Households extends MY_Controller
         $this->require_permission('app.services.master.households.manage');
 
         $in = $this->json_input();
-        $kk_number = trim((string)($in['kk_number'] ?? ''));
         $head_person_id = (int)($in['head_person_id'] ?? 0);
 
         $err = [];
-        if ($kk_number === '') {
-            $err['kk_number'] = 'Wajib diisi';
-        }
         if ($head_person_id <= 0) {
             $err['head_person_id'] = 'Wajib diisi';
         }
         if ($err) {
             api_validation_error($err);
-            return;
-        }
-
-        if ($this->HouseholdModel->find_by_kk($kk_number)) {
-            api_conflict('No KK sudah terdaftar');
             return;
         }
 
@@ -65,7 +56,6 @@ class Households extends MY_Controller
         }
 
         $id = $this->HouseholdModel->create([
-            'kk_number' => $kk_number,
             'head_person_id' => $head_person_id,
         ]);
 
@@ -116,20 +106,6 @@ class Households extends MY_Controller
 
         $in = $this->json_input();
         $payload = [];
-
-        if (isset($in['kk_number'])) {
-            $kk = trim((string)$in['kk_number']);
-            if ($kk === '') {
-                api_validation_error(['kk_number' => 'Wajib diisi']);
-                return;
-            }
-            $other = $this->HouseholdModel->find_by_kk($kk);
-            if ($other && (int)$other['id'] !== $id) {
-                api_conflict('No KK sudah terdaftar');
-                return;
-            }
-            $payload['kk_number'] = $kk;
-        }
 
         if (isset($in['head_person_id'])) {
             $hp = (int)$in['head_person_id'];

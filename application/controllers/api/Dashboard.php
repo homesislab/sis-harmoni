@@ -597,7 +597,7 @@ class Dashboard extends MY_Controller
             $unpaidHouseholds = (int)($qbUnpaidHH->get()->row()->c ?? 0);
 
             $qbLatestInv = $this->db
-                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
+                ->select("i.id, i.household_id, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -625,7 +625,7 @@ class Dashboard extends MY_Controller
             $latestInvoices = $qbLatestInv->get()->result_array();
 
             $qbTopUnpaid = $this->db
-                ->select("i.id, i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
+                ->select("i.id, i.household_id, hs.block, hs.number, p.full_name AS head_name, i.period, i.total_amount, {$outstandingExpr} AS outstanding_amount, i.status, i.created_at, {$invoiceTitleSelect}", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -710,7 +710,7 @@ class Dashboard extends MY_Controller
             }
 
             $qbTopHH = $this->db
-                ->select("i.household_id, h.kk_number, hs.block, hs.number, p.full_name AS head_name, COUNT(*) AS invoices_count, COALESCE(SUM({$outstandingExpr}),0) AS amount", false)
+                ->select("i.household_id, hs.block, hs.number, p.full_name AS head_name, COUNT(*) AS invoices_count, COALESCE(SUM({$outstandingExpr}),0) AS amount", false)
                 ->from('invoices i')
                 ->join('households h', 'h.id = i.household_id', 'left')
                 ->join('persons p', 'p.id = h.head_person_id', 'left')
@@ -765,7 +765,6 @@ class Dashboard extends MY_Controller
                 ->select("
                     p.id,
                     p.payer_household_id,
-                    h.kk_number,
                     hs.block,
                     hs.number,
                     pe.full_name AS head_name,
@@ -813,7 +812,6 @@ class Dashboard extends MY_Controller
                 ->select("
                     p.id,
                     p.payer_household_id,
-                    h.kk_number,
                     hs.block,
                     hs.number,
                     pe.full_name AS head_name,
@@ -886,18 +884,14 @@ class Dashboard extends MY_Controller
 
             $avgPaidPerHousehold = $invoicePaid > 0 ? round($paidAmount / $invoicePaid, 2) : 0.0;
 
-            $normHousehold = function ($kk, $block = null, $number = null, $headName = null) {
-                $kk = (string)($kk ?? '');
+            $normHousehold = function ($block = null, $number = null, $headName = null) {
                 $block = strtoupper(trim((string)($block ?? '')));
                 $number = trim((string)($number ?? ''));
                 $headName = trim((string)($headName ?? ''));
 
                 $unit = ($block !== '' && $number !== '') ? ($block . '-' . $number) : '';
-                if ($unit === '' && $kk !== '') {
-                    $unit = 'KK ' . $kk;
-                }
                 if ($unit === '') {
-                    $unit = 'KK';
+                    $unit = 'Keluarga';
                 }
 
                 $headShort = $headName !== '' ? preg_split('/\s+/', $headName)[0] : '';
@@ -910,7 +904,7 @@ class Dashboard extends MY_Controller
             };
 
             foreach ($latestInvoices as &$it) {
-                $n = $normHousehold($it['kk_number'] ?? '', $it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
+                $n = $normHousehold($it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
                 $it['household_label'] = $n['label'];
                 $it['household_unit'] = $n['unit'];
                 $it['head_name_short'] = $n['head_short'];
@@ -918,7 +912,7 @@ class Dashboard extends MY_Controller
             unset($it);
 
             foreach ($topUnpaid as &$it) {
-                $n = $normHousehold($it['kk_number'] ?? '', $it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
+                $n = $normHousehold($it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
                 $it['household_label'] = $n['label'];
                 $it['household_unit'] = $n['unit'];
                 $it['head_name_short'] = $n['head_short'];
@@ -926,7 +920,7 @@ class Dashboard extends MY_Controller
             unset($it);
 
             foreach ($latestPayments as &$it) {
-                $n = $normHousehold($it['kk_number'] ?? '', $it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
+                $n = $normHousehold($it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
                 $it['household_label'] = $n['label'];
                 $it['household_unit'] = $n['unit'];
                 $it['head_name_short'] = $n['head_short'];
@@ -953,7 +947,7 @@ class Dashboard extends MY_Controller
             unset($it);
 
             foreach ($paymentsPendingLatest as &$it) {
-                $n = $normHousehold($it['kk_number'] ?? '', $it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
+                $n = $normHousehold($it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
                 $it['household_label'] = $n['label'];
                 $it['household_unit'] = $n['unit'];
                 $it['head_name_short'] = $n['head_short'];
@@ -980,7 +974,7 @@ class Dashboard extends MY_Controller
             unset($it);
 
             foreach ($topHouseholds as &$it) {
-                $n = $normHousehold($it['kk_number'] ?? '', $it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
+                $n = $normHousehold($it['block'] ?? null, $it['number'] ?? null, $it['head_name'] ?? null);
                 $it['household_label'] = $n['label'];
                 $it['household_unit'] = $n['unit'];
                 $it['head_name_short'] = $n['head_short'];
@@ -1125,7 +1119,7 @@ class Dashboard extends MY_Controller
 
             $occupancies = [];
             if ($this->db->table_exists('house_occupancies')) {
-                $qbOcc = $this->db->select('o.id, o.house_id, hs.code AS house_code, o.household_id, h.kk_number, o.status, o.start_date, o.end_date, o.created_at')
+                $qbOcc = $this->db->select('o.id, o.house_id, hs.code AS house_code, o.household_id, o.status, o.start_date, o.end_date, o.created_at')
                     ->from('house_occupancies o')
                     ->join('houses hs', 'hs.id = o.house_id', 'left')
                     ->join('households h', 'h.id = o.household_id', 'left')
@@ -1157,7 +1151,7 @@ class Dashboard extends MY_Controller
 
             foreach ($occupancies as &$o) {
                 $o['house_label'] = ($o['house_code'] ?? '') !== '' ? ('Rumah ' . $o['house_code']) : 'Rumah';
-                $o['household_label'] = ($o['kk_number'] ?? '') !== '' ? ('KK ' . $o['kk_number']) : 'KK';
+                $o['household_label'] = 'Keluarga';
             }
             unset($o);
 

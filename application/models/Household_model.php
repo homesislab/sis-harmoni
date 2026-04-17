@@ -12,16 +12,9 @@ class Household_model extends MY_Model
         return $row ?: null;
     }
 
-    public function find_by_kk(string $kk_number): ?array
-    {
-        $row = $this->db->get_where('households', ['kk_number' => $kk_number])->row_array();
-        return $row ?: null;
-    }
-
     public function create(array $data): int
     {
         $this->db->insert('households', [
-            'kk_number' => $data['kk_number'],
             'head_person_id' => (int)$data['head_person_id'],
         ]);
         return (int)$this->db->insert_id();
@@ -30,9 +23,6 @@ class Household_model extends MY_Model
     public function update(int $id, array $data): void
     {
         $upd = [];
-        if (isset($data['kk_number'])) {
-            $upd['kk_number'] = $data['kk_number'];
-        }
         if (isset($data['head_person_id'])) {
             $upd['head_person_id'] = (int)$data['head_person_id'];
         }
@@ -133,8 +123,7 @@ class Household_model extends MY_Model
 
         if ($q !== '') {
             $qb->group_start()
-               ->like('h.kk_number', $q)
-               ->or_like('p.full_name', $q)
+               ->like('p.full_name', $q)
                ->or_like('hs.block', $q)
                ->or_like('hs.number', $q)
                ->group_end();
@@ -176,8 +165,7 @@ class Household_model extends MY_Model
 
         if ($q !== '') {
             $qb->group_start()
-                ->like('h.kk_number', $q)
-                ->or_like('p.full_name', $q)
+                ->like('p.full_name', $q)
                 ->or_like('hs.block', $q)
                 ->or_like('hs.number', $q)
                 ->group_end();

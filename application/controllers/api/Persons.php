@@ -39,11 +39,6 @@ class Persons extends MY_Controller
             return;
         }
 
-        if ($this->PersonModel->find_by_nik(trim((string)$in['nik']))) {
-            api_conflict('NIK sudah terdaftar');
-            return;
-        }
-
         $id = $this->PersonModel->create($in);
         api_ok($this->PersonModel->find_by_id($id), null, 201);
     }
@@ -99,15 +94,6 @@ class Persons extends MY_Controller
         if ($errors) {
             api_validation_error($errors);
             return;
-        }
-
-        if (isset($in['nik'])) {
-            $nik = trim((string)$in['nik']);
-            $other = $this->PersonModel->find_by_nik($nik);
-            if ($other && (int)$other['id'] !== $id) {
-                api_conflict('NIK sudah terdaftar');
-                return;
-            }
         }
 
         $this->PersonModel->update($id, $in);

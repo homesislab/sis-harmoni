@@ -815,7 +815,6 @@ class Payments extends MY_Controller
 
         $row = $this->db->select("
                 hh.id,
-                hh.kk_number,
                 p.full_name as head_name,
                 hs.block as house_block,
                 hs.number as house_number,

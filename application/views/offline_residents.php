@@ -404,7 +404,6 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
                                     </td>
                                     <td>
                                         <div class="name"><?= html_escape($row['db_head_name'] ?: 'Belum ada kepala keluarga aktif') ?></div>
-                                        <div class="muted">KK: <?= html_escape($row['db_kk_number'] ?: '-') ?></div>
                                         <div class="muted">Anggota: <?= (int)$row['member_count'] ?>, akun aktif: <?= (int)$row['active_user_count'] ?></div>
                                     </td>
                                     <td>
@@ -473,8 +472,7 @@ $allBlastRows = array_values(array_filter($items, fn ($row) => empty($row['is_re
                 .replaceAll('{unit}', row.unit_code || '')
                 .replaceAll('{unit_db}', row.matched_unit_code || row.unit_code || '')
                 .replaceAll('{suami}', row.csv_suami || '')
-                .replaceAll('{istri}', row.csv_istri || '')
-                .replaceAll('{kk}', row.db_kk_number || '');
+                .replaceAll('{istri}', row.csv_istri || '');
         }
 
         function escapeHtml(value) {

@@ -90,7 +90,6 @@ class Offline_resident_model extends CI_Model
                 'raw_whatsapp_number' => $row['whatsapp_number'],
                 'db_house' => $db,
                 'db_head_name' => $db['head_name'] ?? '',
-                'db_kk_number' => $db['kk_number'] ?? '',
                 'db_household_id' => (int)($db['household_id'] ?? 0),
                 'db_house_id' => (int)($db['house_id'] ?? 0),
                 'member_count' => $memberCount,
@@ -219,7 +218,6 @@ class Offline_resident_model extends CI_Model
                 h.number AS house_number,
                 h.code AS house_code,
                 hh.id AS household_id,
-                hh.kk_number,
                 p.full_name AS head_name,
                 COUNT(DISTINCT hm.person_id) AS member_count,
                 COUNT(DISTINCT CASE WHEN u.status = 'active' THEN u.id END) AS active_user_count,
@@ -233,7 +231,7 @@ class Offline_resident_model extends CI_Model
             ->join('household_members hm', 'hm.household_id = hh.id', 'left')
             ->join('users u', '(u.person_id = hm.person_id OR u.person_id = hh.head_person_id)', 'left', false)
             ->join('persons up', 'up.id = u.person_id', 'left')
-            ->group_by('h.id, h.block, h.number, h.code, hh.id, hh.kk_number, p.full_name')
+            ->group_by('h.id, h.block, h.number, h.code, hh.id, p.full_name')
             ->get()
             ->result_array();
 

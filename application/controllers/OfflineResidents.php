@@ -118,7 +118,6 @@ class OfflineResidents extends CI_Controller
             'suami',
             'istri',
             'whatsapp',
-            'kk_database',
             'kepala_keluarga_database',
             'jumlah_akun_aktif',
             'akun_terdaftar',
@@ -133,7 +132,6 @@ class OfflineResidents extends CI_Controller
                 $row['csv_suami'],
                 $row['csv_istri'],
                 $row['whatsapp_number'],
-                $row['db_kk_number'],
                 $row['db_head_name'],
                 $row['active_user_count'],
                 implode(', ', $row['registered_usernames']),
@@ -178,7 +176,6 @@ class OfflineResidents extends CI_Controller
             '{unit_db}' => (string)($row['matched_unit_code'] ?: ($row['unit_code'] ?? '')),
             '{suami}' => (string)($row['csv_suami'] ?? ''),
             '{istri}' => (string)($row['csv_istri'] ?? ''),
-            '{kk}' => (string)($row['db_kk_number'] ?? ''),
         ];
 
         return strtr($template, $replace);

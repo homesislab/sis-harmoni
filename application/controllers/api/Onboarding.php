@@ -105,18 +105,11 @@ class Onboarding extends MY_Controller
     {
         $in = $this->json_input();
 
-        $household = $in['household'] ?? [];
         $head = $in['head'] ?? [];
         $members = $in['members'] ?? [];
         $vehicles = $in['vehicles'] ?? [];
         $units = $in['units'] ?? [];
         $account = $in['account'] ?? [];
-
-        $kk = trim((string)($household['kk_number'] ?? ''));
-        if ($kk === '') {
-            api_validation_error(['kk_number' => 'Wajib diisi'], 'Validasi gagal');
-            return;
-        }
 
         $errHead = $this->PersonModel->validate_payload($head, true);
         if ($errHead) {
@@ -228,7 +221,6 @@ class Onboarding extends MY_Controller
             $headPersonId = $this->PersonModel->create($head);
 
             $householdId = $this->HouseholdModel->create([
-                'kk_number' => $kk,
                 'head_person_id' => $headPersonId,
             ]);
 
@@ -243,7 +235,7 @@ class Onboarding extends MY_Controller
                     $pdata = $m;
                     unset($pdata['relationship']);
 
-                    if (trim((string)($pdata['full_name'] ?? '')) === '' && trim((string)($pdata['nik'] ?? '')) === '') {
+                    if (trim((string)($pdata['full_name'] ?? '')) === '') {
                         continue;
                     }
 

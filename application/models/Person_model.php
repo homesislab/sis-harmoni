@@ -11,7 +11,6 @@ class Person_model extends MY_Model
         if ($q !== '') {
             $qb->group_start()
                 ->like('p.full_name', $q)
-                ->or_like('p.nik', $q)
                 ->or_like('p.phone', $q)
                 ->group_end();
         }
@@ -32,15 +31,6 @@ class Person_model extends MY_Model
                     ORDER BY hm.id DESC
                     LIMIT 1
                 ) AS household_id,
-
-                (
-                    SELECT h.kk_number
-                    FROM household_members hm2
-                    JOIN households h ON h.id = hm2.household_id
-                    WHERE hm2.person_id = p.id
-                    ORDER BY hm2.id DESC
-                    LIMIT 1
-                ) AS kk_number,
 
                 (
                     SELECT hm3.relationship
@@ -77,15 +67,9 @@ class Person_model extends MY_Model
         return $row ?: null;
     }
 
-    public function find_by_nik(string $nik): ?array
-    {
-        $row = $this->db->get_where('persons', ['nik' => $nik])->row_array();
-        return $row ?: null;
-    }
-
     public function validate_payload(array $in, bool $is_create): array
     {
-        $req = ['nik','full_name','gender','birth_place','birth_date','religion','marital_status'];
+        $req = ['full_name','gender','birth_place','birth_date','religion','marital_status'];
         $err = [];
 
         if ($is_create) {
@@ -137,7 +121,6 @@ class Person_model extends MY_Model
     public function create(array $data): int
     {
         $insert = [
-            'nik'            => trim((string)$data['nik']),
             'full_name'      => trim((string)$data['full_name']),
             'gender'         => strtoupper(trim((string)$data['gender'])),
             'birth_place'    => trim((string)$data['birth_place']),
@@ -157,7 +140,7 @@ class Person_model extends MY_Model
 
     public function update(int $id, array $data): void
     {
-        $allowed = ['nik','full_name','gender','birth_place','birth_date','religion','blood_type','marital_status','education','occupation','phone','email','status'];
+        $allowed = ['full_name','gender','birth_place','birth_date','religion','blood_type','marital_status','education','occupation','phone','email','status'];
         $upd = [];
         foreach ($allowed as $k) {
             if (array_key_exists($k, $data)) {
